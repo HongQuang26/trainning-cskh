@@ -2,7 +2,7 @@ import streamlit as st
 import time
 
 # ==============================================================================
-# 1. CẤU HÌNH & GIAO DIỆN (UI/UX)
+# 1. CONFIGURATION & UI (UI/UX)
 # ==============================================================================
 st.set_page_config(
     page_title="Training Master Pro",
@@ -10,10 +10,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# CSS tùy chỉnh để giao diện trông "Đắt tiền" hơn
+# Custom CSS for a "Premium" look
 st.markdown("""
 <style>
-    /* Tùy chỉnh nút bấm */
+    /* Button Customization */
     .stButton button {
         border-radius: 12px;
         height: auto;
@@ -23,7 +23,7 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         transition: all 0.3s ease;
         border: 1px solid #e0e0e0;
-        white-space: pre-wrap; /* Để text dài tự xuống dòng */
+        white-space: pre-wrap; /* Wrap text */
     }
     .stButton button:hover {
         transform: translateY(-2px);
@@ -33,7 +33,7 @@ st.markdown("""
         background-color: #f8f9fa;
     }
     
-    /* Khung hội thoại */
+    /* Chat Container */
     .chat-container {
         background-color: #ffffff;
         padding: 25px;
@@ -55,7 +55,7 @@ st.markdown("""
         font-style: italic;
     }
     
-    /* Thẻ thông tin bên trái */
+    /* Left Sidebar Profile Card */
     .profile-card {
         background: #f8f9fa;
         padding: 20px;
@@ -63,7 +63,7 @@ st.markdown("""
         border: 1px solid #dee2e6;
     }
     
-    /* Phân tích */
+    /* Analysis Boxes */
     .analysis-box-good {
         background: #d4edda;
         padding: 15px;
@@ -84,343 +84,343 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. KHO DỮ LIỆU KỊCH BẢN CHI TIẾT
+# 2. SCENARIO DATA WAREHOUSE (ENGLISH)
 # ==============================================================================
 
 ALL_SCENARIOS = {
     "SC_FNB_01": {
-        "title": "F&B: Sự Cố Vật Thể Lạ",
-        "desc": "Khách hàng phát hiện có tóc trong món súp tại nhà hàng 5 sao.",
+        "title": "F&B: Foreign Object Incident",
+        "desc": "A customer discovers a hair in their soup at a 5-star restaurant.",
         "difficulty": "Hard",
         "customer": {
-            "name": "Chị Ngọc (Food Reviewer)",
+            "name": "Ms. Jade (Food Reviewer)",
             "avatar": "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?q=80&w=400",
-            "traits": ["Khó tính", "Reviewer nổi tiếng", "Thích sự hoàn hảo"],
-            "spending": "Khách mới (Rủi ro cao)"
+            "traits": ["Picky", "Famous Reviewer", "Perfectionist"],
+            "spending": "New Customer (High Risk)"
         },
         "steps": {
             "start": {
                 "patience": 30, 
                 "img": "https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?q=80&w=800",
-                "text": "(Giọng đanh lại, chỉ vào bát súp) Quản lý đâu? Ra đây tôi bảo. Nhà hàng 5 sao kiểu gì mà trong súp lại có sợi tóc dài ngoằng thế này? Các người định cho khách ăn đồ bẩn à? Thật kinh tởm!",
+                "text": "(Pointing at the soup bowl furiously) Manager! Come here. What kind of 5-star restaurant serves soup with a long hair in it? Are you trying to feed me garbage? This is disgusting!",
                 "choices": {
-                    "A": "Chối bỏ: 'Dạ chị ơi, bếp bên em toàn tóc đen và đội mũ kỹ lắm, tóc này màu vàng lạ quá. Chị xem lại có phải tóc của chị rơi xuống không?'",
-                    "B": "Tiếp nhận & Hành động: 'Dạ em thành thật xin lỗi chị Ngọc về trải nghiệm tồi tệ này! Em nhìn thấy rồi ạ. Em xin phép thu hồi món này ngay lập tức.'"
+                    "A": "Denial: 'Ma'am, our kitchen staff all have black hair and wear nets. This hair is blonde. Are you sure it isn't yours?'",
+                    "B": "Acceptance & Action: 'I am terribly sorry about this awful experience, Ms. Jade! I see it. I will remove this dish immediately.'"
                 },
                 "consequences": {
-                    "A": {"next": "game_over_bad_fnb", "change": -40, "analysis": "❌ SAI LẦM CHẾT NGƯỜI: Tuyệt đối không được đổ lỗi ngược lại cho khách hàng về vấn đề vệ sinh. Tranh cãi lúc này là tự sát."},
-                    "B": {"next": "step_compensate", "change": +20, "analysis": "✅ CHUẨN XÁC: Công nhận vấn đề ngay lập tức và hành động (thu hồi món) để giảm bớt sự ghê tẩm của khách."}
+                    "A": {"next": "game_over_bad_fnb", "change": -40, "analysis": "❌ FATAL ERROR: Never blame the customer regarding hygiene issues. Arguing at this point is suicide."},
+                    "B": {"next": "step_compensate", "change": +20, "analysis": "✅ CORRECT: Acknowledge the problem immediately and take action (remove the dish) to reduce the customer's disgust."}
                 }
             },
             "step_compensate": {
                 "patience": 50,
                 "img": "https://images.unsplash.com/photo-1552581234-26160f608093?q=80&w=800",
-                "text": "(Vẫn còn khó chịu) Tôi hết hứng ăn uống rồi. Bữa tối kỷ niệm của vợ chồng tôi bị phá hỏng hoàn toàn. Giờ các bạn tính sao?",
+                "text": "(Still annoyed) I've lost my appetite. Our anniversary dinner is completely ruined. How are you going to fix this?",
                 "choices": {
-                    "A": "Giải pháp tiêu chuẩn: 'Dạ em xin phép đổi cho chị bát súp mới và giảm giá 10% tổng hóa đơn bữa nay để xin lỗi ạ.'",
-                    "B": "Giải pháp WOW: 'Dạ em rất hiểu sự thất vọng của chị. Em xin phép MIỄN PHÍ toàn bộ bữa tối nay. Ngoài ra, bếp trưởng xin gửi tặng anh chị món tráng miệng đặc biệt thay lời xin lỗi ạ.'"
+                    "A": "Standard Solution: 'I will replace it with a new soup and give you a 10% discount on the total bill to apologize.'",
+                    "B": "WOW Solution: 'I completely understand your frustration. I would like to COMP the entire meal tonight (Free). Also, the chef would like to send a special dessert as our sincerest apology.'",
                 },
                 "consequences": {
-                    "A": {"next": "game_over_fail_fnb", "change": -10, "analysis": "⚠️ TRUNG BÌNH: Với lỗi vệ sinh nghiêm trọng ở nhà hàng 5 sao, giảm 10% là không đủ. Khách vẫn cảm thấy thiệt thòi."},
-                    "B": {"next": "game_over_good_fnb", "change": +50, "analysis": "🏆 XUẤT SẮC: 'Over-compensate' (Đền bù vượt mong đợi) là cách duy nhất để cứu vãn uy tín trong tình huống này."}
+                    "A": {"next": "game_over_fail_fnb", "change": -10, "analysis": "⚠️ AVERAGE: For a serious hygiene issue in a 5-star place, 10% is not enough. The customer still feels cheated."},
+                    "B": {"next": "game_over_good_fnb", "change": +50, "analysis": "🏆 EXCELLENT: 'Over-compensating' is the only way to save your reputation in this disaster."}
                 }
             },
             "game_over_good_fnb": {
                 "type": "WIN",
-                "title": "⭐ LẤY LẠI NIỀM TIN",
+                "title": "⭐ TRUST RESTORED",
                 "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800",
-                "text": "Chị Ngọc bất ngờ trước cách xử lý hào phóng. Chị ấy viết bài review khen ngợi cách xử lý khủng hoảng chuyên nghiệp thay vì bóc phốt.",
+                "text": "Ms. Jade was surprised by the generous handling. She wrote a review praising the professional crisis management instead of exposing the issue.",
                 "score": 100
             },
             "game_over_fail_fnb": {
                 "type": "LOSE",
-                "title": "😐 KHÁCH HÀNG KHÔNG QUAY LẠI",
+                "title": "😐 CUSTOMER LOST",
                 "img": "https://images.unsplash.com/photo-1522029916167-9c1a97aa3c24?q=80&w=800",
-                "text": "Khách chấp nhận giảm 10% nhưng ăn qua loa rồi về. Họ đánh giá 2 sao trên Google Maps về vấn đề vệ sinh.",
+                "text": "She accepted the 10% discount but ate quickly and left. She rated 2 stars on Google Maps regarding hygiene.",
                 "score": 40
             },
             "game_over_bad_fnb": {
                 "type": "LOSE",
-                "title": "☠️ THẢM HỌA TRUYỀN THÔNG",
+                "title": "☠️ PR DISASTER",
                 "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800",
-                "text": "Chị Ngọc quay video cảnh tranh cãi đăng lên TikTok: 'Nhà hàng 5 sao đổ oan cho khách bỏ tóc vào đồ ăn'. Video lên xu hướng ngay lập tức.",
+                "text": "Ms. Jade filmed the argument and posted it on TikTok: '5-star restaurant accuses customer of planting hair'. The video went viral.",
                 "score": 0
             }
         }
     },
 
     "SC_HOTEL_01": {
-        "title": "Hotel: Hết Phòng (Overbooked)",
-        "desc": "Khách đi trăng mật đến nơi thì lễ tân báo hết phòng View Biển đã đặt.",
+        "title": "Hotel: Overbooked",
+        "desc": "Honeymoon couple arrives, but the receptionist says the Ocean View room is unavailable.",
         "difficulty": "Very Hard",
         "customer": {
-            "name": "Anh Minh & Chị Hoa",
+            "name": "Mr. Mike & Ms. Sara",
             "avatar": "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?q=80&w=400",
-            "traits": ["Mệt mỏi sau chuyến bay", "Kỳ vọng cao (Trăng mật)", "Dễ xúc động"],
-            "spending": "Gói Trăng mật (10tr/đêm)"
+            "traits": ["Tired from flight", "High Expectations", "Emotional"],
+            "spending": "Honeymoon Package ($500/night)"
         },
         "steps": {
             "start": {
                 "patience": 20,
                 "img": "https://images.unsplash.com/photo-1542596594-6eb9880fb7a6?q=80&w=800",
-                "text": "(Anh Minh lớn tiếng) Cái gì? Hết phòng là sao? Tôi đã đặt và thanh toán trước cả tháng nay rồi! Đây là kỳ nghỉ trăng mật, tôi không chấp nhận phòng hướng vườn đâu!",
+                "text": "(Mr. Mike shouting) What do you mean 'no rooms'? I booked and paid a month ago! This is our honeymoon, I will NOT accept a Garden View room!",
                 "choices": {
-                    "A": "Đổ lỗi hệ thống: 'Dạ em rất xin lỗi. Do hệ thống đặt phòng bị lỗi overbook nên bên em không giữ được phòng View Biển ạ. Mong anh chị thông cảm.'",
-                    "B": "Đồng cảm & Nhận lỗi: 'Dạ em thành thật xin lỗi anh Minh, chị Hoa! Đây hoàn toàn là lỗi của bên em khi không đảm bảo được phòng cho kỳ nghỉ quan trọng này.'"
+                    "A": "Blame System: 'I am very sorry. Our system overbooked the rooms, so we couldn't hold the Ocean View. We hope for your understanding.'",
+                    "B": "Empathy & Ownership: 'I sincerely apologize, Mr. Mike and Ms. Sara! This is entirely our fault for failing to secure the room for such an important trip.'"
                 },
                 "consequences": {
-                    "A": {"next": "game_over_bad_hotel", "change": -30, "analysis": "❌ TỆ: Khách hàng không quan tâm lý do hệ thống. Câu 'Mong anh chị thông cảm' nghe rất sáo rỗng."},
-                    "B": {"next": "step_upgrade", "change": +20, "analysis": "✅ TỐT: Nhận lỗi trực diện, gọi đúng tên khách, thể hiện sự thấu hiểu tầm quan trọng của chuyến đi."}
+                    "A": {"next": "game_over_bad_hotel", "change": -30, "analysis": "❌ BAD: Customers don't care about 'systems'. Asking for 'understanding' sounds like a generic excuse."},
+                    "B": {"next": "step_upgrade", "change": +20, "analysis": "✅ GOOD: Direct ownership, using names, and acknowledging the importance of the trip."}
                 }
             },
             "step_upgrade": {
                 "patience": 40,
                 "img": "https://images.unsplash.com/photo-1618773928121-c32242e63f39?q=80&w=800",
-                "text": "(Chị Hoa rơm rớm nước mắt) Nhưng bọn mình đã mơ về căn phòng view biển đó... Giờ ở phòng hướng vườn thì còn gì là trăng mật nữa.",
+                "text": "(Ms. Sara tearing up) But we dreamed about that ocean view... A garden room ruins the honeymoon vibe.",
                 "choices": {
-                    "A": "Giải pháp Nâng cấp: 'Dạ View Biển đã hết, nhưng để chuộc lỗi, em xin NÂNG CẤP miễn phí anh chị lên hạng SUITE Tổng Thống (đắt gấp đôi) trong 2 đêm đầu ạ.'",
-                    "B": "Giải pháp Hoàn tiền: 'Dạ nếu ở phòng Hướng Vườn, bên em sẽ hoàn lại tiền chênh lệch và giảm thêm 20% giá phòng cho anh chị ạ.'"
+                    "A": "Upgrade Solution: 'The Ocean View is gone, but to make it up to you, I would like to UPGRADE you to the PRESIDENTIAL SUITE (Double price) for free for the first 2 nights.'",
+                    "B": "Refund Solution: 'If you stay in the Garden View, we will refund the difference and give you an extra 20% discount on the room rate.'"
                 },
                 "consequences": {
-                    "A": {"next": "game_over_good_hotel", "change": +60, "analysis": "🏆 TUYỆT VỜI: Khi không có cái khách muốn, hãy đưa cái tốt hơn hẳn. Suite Tổng Thống là trải nghiệm 'Wow' bù đắp nỗi thất vọng."},
-                    "B": {"next": "game_over_fail_hotel", "change": -20, "analysis": "⚠️ KÉM: Với khách trăng mật, TRẢI NGHIỆM quan trọng hơn TIỀN. Hoàn tiền không cứu vãn được cảm xúc."}
+                    "A": {"next": "game_over_good_hotel", "change": +60, "analysis": "🏆 EXCELLENT: When you can't give what they want, give something much better. The Presidential Suite is a 'Wow' factor."},
+                    "B": {"next": "game_over_fail_hotel", "change": -20, "analysis": "⚠️ POOR: For a honeymoon, EXPERIENCE matters more than MONEY. A refund doesn't fix the ruined mood."}
                 }
             },
             "game_over_good_hotel": {
                 "type": "WIN",
-                "title": "🥂 KỲ NGHỈ TRONG MƠ",
+                "title": "🥂 DREAM HONEYMOON",
                 "img": "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?q=80&w=800",
-                "text": "Anh chị choáng ngợp trước căn Suite sang trọng. Họ cảm thấy được đối xử như VIP và sự cố trở thành kỷ niệm đẹp.",
+                "text": "They were overwhelmed by the luxurious Suite. They felt treated like VIPs, and the incident became a happy memory.",
                 "score": 100
             },
             "game_over_fail_hotel": {
                 "type": "LOSE",
-                "title": "😢 KỲ TRĂNG MẬT BUỒN",
+                "title": "😢 SAD TRIP",
                 "img": "https://images.unsplash.com/photo-1583323731095-d7c9bd2690f6?q=80&w=800",
-                "text": "Họ miễn cưỡng nhận phòng và tiền hoàn lại, nhưng tâm trạng bị ảnh hưởng nặng nề. Họ sẽ không quay lại.",
+                "text": "They reluctantly took the room and refund, but the mood was ruined. They will not return.",
                 "score": 40
             },
             "game_over_bad_hotel": {
                 "type": "LOSE",
-                "title": "🤬 CƠN THỊNH NỘ",
+                "title": "🤬 LOBBY RAGE",
                 "img": "https://images.unsplash.com/photo-1574790502501-701452c15414?q=80&w=800",
-                "text": "Anh Minh đòi gặp Giám đốc và yêu cầu hoàn tiền 100% để chuyển khách sạn khác. Cả sảnh náo loạn.",
+                "text": "Mr. Mike demanded to see the Manager and asked for a 100% refund immediately to switch hotels. The lobby was in chaos.",
                 "score": 0
             }
         }
     },
 
     "SC_ECOMM_01": {
-        "title": "Online: Hàng Lạc Trôi",
-        "desc": "App báo giao thành công nhưng khách chưa nhận được hàng (giày đi thi).",
+        "title": "Online: Lost Package",
+        "desc": "App says 'Delivered' but the customer hasn't received anything.",
         "difficulty": "Medium",
         "customer": {
-            "name": "Bạn Tuấn (Sinh viên)",
+            "name": "Tom (Student)",
             "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=400",
-            "traits": ["Lo lắng mất tiền", "Nghi ngờ shipper", "Cần gấp"],
-            "spending": "Thấp"
+            "traits": ["Worried about money", "Suspicious", "Urgent"],
+            "spending": "Low"
         },
         "steps": {
             "start": {
                 "patience": 40,
                 "img": "https://images.unsplash.com/photo-1566576912321-d58ba2188273?q=80&w=800",
-                "text": "Alo shop ơi, app báo giao thành công rồi mà mình chưa nhận được? Mình hỏi lễ tân cũng không có. Có khi nào shipper lấy luôn rồi không? Mình cần giày gấp!",
+                "text": "Hello shop? The app says my shoes were delivered at 10 AM, but I have nothing! I asked the receptionist, and they don't have it either. Did the driver steal it? I need them for my exam tomorrow!",
                 "choices": {
-                    "A": "Đẩy trách nhiệm: 'Chào bạn, hệ thống báo giao rồi ạ. Bạn thử hỏi lại người nhà hoặc hàng xóm xem.'",
-                    "B": "Trấn an: 'Chào Tuấn, shop đã ghi nhận. Bạn đừng lo, shop sẽ chịu trách nhiệm làm việc với bên vận chuyển để tìm hàng cho bạn ngay.'"
+                    "A": "Deflect: 'Hi, the system says delivered. Please check with your neighbors or family members.'",
+                    "B": "Reassure: 'Hi Tom, I understand. Please don't worry, we will take full responsibility and work with the carrier to locate your package right now.'"
                 },
                 "consequences": {
-                    "A": {"next": "step_panic", "change": -20, "analysis": "⚠️ KÉM: Đẩy trách nhiệm lại cho khách đang hoang mang gây ức chế. Khách đã nói hỏi lễ tân rồi."},
-                    "B": {"next": "step_investigate", "change": +20, "analysis": "✅ TỐT: Câu 'shop sẽ chịu trách nhiệm' là liều thuốc an thần, khẳng định bạn đứng về phía khách."}
+                    "A": {"next": "step_panic", "change": -20, "analysis": "⚠️ POOR: Pushing responsibility back to a panicked customer causes frustration. He already said he checked with the receptionist."},
+                    "B": {"next": "step_investigate", "change": +20, "analysis": "✅ GOOD: 'We take full responsibility' is a sedative phrase. It confirms you are on their side."}
                 }
             },
             "step_panic": {
                 "patience": 20,
                 "img": "https://images.unsplash.com/photo-1633934542430-0905ccb5f050?q=80&w=800",
-                "text": "Mình ở trọ một mình! Mình hỏi hết rồi không ai nhận cả. Rõ ràng là lừa đảo! Trả tiền lại cho tôi!",
+                "text": "I live alone! I asked everyone! This is clearly a scam! Refund my money!",
                 "choices": {
-                    "A": "Cứng rắn: 'Bạn bình tĩnh lại, bên mình làm ăn uy tín. Bạn cứ chờ để check đã.'",
-                    "B": "Cam kết mạnh: 'Mình rất hiểu bạn đang lo. Mình cam kết nếu đến 6h chiều nay không tìm thấy, shop sẽ SHIP HỎA TỐC đôi mới cho bạn kịp đi thi.'",
+                    "A": "Firm: 'Calm down, we are a reputable business. Just wait for us to check.'",
+                    "B": "Strong Promise: 'I understand your anxiety. I promise if we can't find it by 6 PM, we will EXPRESS SHIP a new pair so you have them for your exam.'",
                 },
                 "consequences": {
-                    "A": {"next": "game_over_bad_ecomm", "change": -20, "analysis": "❌ TỆ: Bảo khách đang hoảng loạn 'bình tĩnh' là vô dụng."},
-                    "B": {"next": "game_over_good_ecomm_rescue", "change": +50, "analysis": "✅ XUẤT SẮC: Đưa ra cam kết cho tình huống xấu nhất. Khách yên tâm vì đằng nào cũng có giày."}
+                    "A": {"next": "game_over_bad_ecomm", "change": -20, "analysis": "❌ BAD: Telling a panicked customer to 'Calm down' is useless and antagonistic."},
+                    "B": {"next": "game_over_good_ecomm_rescue", "change": +50, "analysis": "✅ EXCELLENT: Offering a 'Worst-case scenario guarantee'. The customer stops worrying because they will get shoes either way."}
                 }
             },
              "step_investigate": {
                 "patience": 60,
                 "img": "https://images.unsplash.com/photo-1528736047006-d320da8a2437?q=80&w=800",
-                "text": "(15p sau) Alo Tuấn ơi, shipper báo gửi tạm ở chốt bảo vệ cổng sau, không phải lễ tân ạ. Ảnh xin lỗi vì chưa kịp báo. Bạn xuống xem giúp shop nhé.",
+                "text": "(15 mins later) Hi Tom, the driver said he couldn't reach you, so he left it at the back gate security, not the front desk. He apologizes for not texting you. Could you check there?",
                 "choices": {
-                    "A": "Kết thúc đơn giản: 'Dạ vâng lỗi do shipper ạ. Bạn xuống lấy giúp mình nha.'",
-                    "B": "Kết thúc chu đáo: 'Thật xin lỗi Tuấn vì làm bạn lo lắng. Bạn xuống cổng sau lấy giúp shop nhé. Shop tặng bạn mã freeship lần sau tạ lỗi nha.'"
+                    "A": "Simple Close: 'So it was the driver's fault. Please go pick it up. Thanks.'",
+                    "B": "Thoughtful Close: 'So sorry for the worry, Tom. Please check the back gate. Here is a Free Shipping voucher for next time as an apology from us.'"
                 },
                 "consequences": {
-                    "A": {"next": "game_over_normal_ecomm", "change": +10, "analysis": "🙂 TẠM ỔN: Vấn đề được giải quyết, nhưng trải nghiệm chỉ ở mức trung bình."},
-                    "B": {"next": "game_over_good_ecomm", "change": +30, "analysis": "✅ TỐT: Nhận lỗi thay shipper và có quà nhỏ (freeship) xoa dịu sự khó chịu."}
+                    "A": {"next": "game_over_normal_ecomm", "change": +10, "analysis": "🙂 AVERAGE: Problem solved, but customer experience is mediocre (still annoyed about running around)."},
+                    "B": {"next": "game_over_good_ecomm", "change": +30, "analysis": "✅ GOOD: Taking the blame for the courier and offering a small gift (voucher) smooths things over."}
                 }
             },
             "game_over_good_ecomm": {
                 "type": "WIN",
-                "title": "👍 TÌM THẤY HÀNG",
+                "title": "👍 PACKAGE FOUND",
                 "img": "https://images.unsplash.com/photo-1556740758-90de374c12ad?q=80&w=800",
-                "text": "Tuấn nhận được giày. Tuy hơi phiền nhưng cậu ấy đánh giá cao sự nhiệt tình hỗ trợ.",
+                "text": "Tom got the shoes. A bit annoyed, but he appreciated the enthusiastic support.",
                 "score": 90
             },
             "game_over_good_ecomm_rescue": {
                 "type": "WIN",
-                "title": "🦸‍♂️ GIẢI CỨU THÀNH CÔNG",
+                "title": "🦸‍♂️ SUCCESSFUL RESCUE",
                 "img": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=800",
-                "text": "Hàng thất lạc thật. Shop giữ đúng lời hứa ship hỏa tốc đôi mới. Tuấn trở thành khách trung thành.",
+                "text": "Package was actually lost. Shop kept the promise and express shipped a new pair. Tom became a loyal customer.",
                 "score": 100
             },
              "game_over_normal_ecomm": {
                 "type": "WIN",
-                "title": "📦 ĐÃ NHẬN HÀNG",
+                "title": "📦 RECEIVED",
                 "img": "https://images.unsplash.com/photo-1598942610451-9573a059795c?q=80&w=800",
-                "text": "Tuấn đi lấy hàng với chút bực bội. Không đánh giá 5 sao nhưng cũng không khiếu nại.",
+                "text": "Tom went to get the package, slightly irritated. Won't rate 5 stars but won't complain further.",
                 "score": 70
             },
             "game_over_bad_ecomm": {
                 "type": "LOSE",
-                "title": "🤬 KHÁCH HÀNG MẤT NIỀM TIN",
+                "title": "🤬 TRUST LOST",
                 "img": "https://images.unsplash.com/photo-1586866016892-117e620d5520?q=80&w=800",
-                "text": "Tuấn cho rằng shop bao che lừa đảo. Cậu ấy đánh giá 1 sao và báo cáo lên sàn.",
+                "text": "Tom thinks the shop is covering for a scam. He rated 1 star and reported the shop.",
                 "score": 10
             }
         }
     },
 
     "SC_RETAIL_01": {
-        "title": "Bán Lẻ: Bình Gốm Vỡ",
-        "desc": "Khách VIP nhận được bình gốm vỡ nát trước giờ tặng sếp.",
+        "title": "Retail: Broken Vase",
+        "desc": "VIP customer received a shattered vase right before gifting time.",
         "difficulty": "Hard",
         "customer": {
-            "name": "Chị Lan (Gold Member)",
+            "name": "Ms. Lan (Gold Member)",
             "avatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=400",
-            "traits": ["Nóng tính", "Quyền lực", "Đang rất gấp"],
-            "spending": "50tr/năm"
+            "traits": ["Hot-tempered", "Powerful", "In a rush"],
+            "spending": "$2000/year"
         },
         "steps": {
             "start": {
                 "patience": 40,
                 "img": "https://images.unsplash.com/photo-1596496050844-461dc5b7263f?q=80&w=800",
-                "text": "Alo! Làm ăn kiểu gì thế? Cái bình 5 triệu tặng sếp tối nay, mở ra vỡ tan tành rồi! Các người lừa đảo à?",
+                "text": "Hello! How do you do business? The $200 vase I bought for my boss is shattered! Are you scamming me?",
                 "choices": {
-                    "A": "Trấn an: 'Dạ em nghe đây ạ. Em rất xin lỗi chị. Chị bình tĩnh giúp em, em sẽ xử lý ngay ạ.'",
-                    "B": "Đòi mã đơn: 'Dạ chị cho em xin Mã Đơn Hàng để em kiểm tra xem có đúng hàng bên em không ạ.'",
+                    "A": "Empathy: 'I hear you, ma'am. I am very sorry. Please stay calm, I will handle this immediately.'",
+                    "B": "Procedure: 'Please give me your Order ID so I can check if it is our product.'",
                 },
                 "consequences": {
-                    "A": {"next": "step_solution", "change": +20, "analysis": "✅ TỐT: Ưu tiên hạ hỏa (Empathy) trước, xử lý logic sau."},
-                    "B": {"next": "step_rage", "change": -20, "analysis": "⚠️ KÉM: Đòi mã đơn lúc khách điên tiết là đổ thêm dầu vào lửa."}
+                    "A": {"next": "step_solution", "change": +20, "analysis": "✅ GOOD: Prioritize emotions (Empathy) first, logic second."},
+                    "B": {"next": "step_rage", "change": -20, "analysis": "⚠️ POOR: Asking for an ID when the customer is furious adds fuel to the fire."}
                 }
             },
             "step_solution": {
                 "patience": 60,
                 "img": "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?q=80&w=800",
-                "text": "(Giọng dịu hơn) Chị cần gấp 6h tối nay. Giờ vỡ thế này chị lấy gì tặng? Em đền ngay cái khác được không?",
+                "text": "(Softer voice) I need it by 6 PM tonight. What can I gift now? Can you replace it immediately?",
                 "choices": {
-                    "A": "Linh hoạt: 'Dạ trường hợp gấp, em sẽ xin sếp ship hỏa tốc cái mới cho chị ngay trong 1 tiếng nữa ạ.'",
-                    "B": "Cứng nhắc: 'Dạ quy định là chị phải gửi hàng vỡ về, bên em nhận được rồi mới gửi cái mới (mất 3 ngày).'"
+                    "A": "Flexible: 'Given the urgency, I will ask my manager to EXPRESS SHIP a new one to you within 1 hour.'",
+                    "B": "Rigid: 'Policy states you must return the broken item first, then we send a new one (takes 3 days).'"
                 },
                 "consequences": {
-                    "A": {"next": "game_over_good_retail", "change": +30, "analysis": "✅ XUẤT SẮC: Với khách VIP và gấp, cần linh hoạt phá bỏ quy trình."},
-                    "B": {"next": "game_over_fail_retail", "change": -50, "analysis": "❌ THẤT BẠI: Đúng quy trình nhưng sai thời điểm. Mất khách vĩnh viễn."}
+                    "A": {"next": "game_over_good_retail", "change": +30, "analysis": "✅ EXCELLENT: For VIPs and emergencies, you must bend the rules."},
+                    "B": {"next": "game_over_fail_retail", "change": -50, "analysis": "❌ FAIL: Correct procedure but wrong timing. You lost the customer."}
                 }
             },
             "step_rage": {
                 "patience": 20,
                 "img": "https://images.unsplash.com/photo-1555861496-0666c8981751?q=80&w=800",
-                "text": "Mã cái gì mà mã! Hàng nát bét rồi! Tao không rảnh lục tin nhắn. Giải quyết luôn đi!",
+                "text": "Order ID?! The vase is destroyed! I don't have time to dig up messages. Fix it now!",
                 "choices": {
-                    "A": "Mềm mỏng: 'Dạ em xin lỗi, em sẽ tra theo số điện thoại ngay ạ. Chị chờ em 30 giây nhé.'",
-                    "B": "Giáo điều: 'Không có mã thì hệ thống không cho phép em truy cập đâu ạ.'"
+                    "A": "Soft: 'I apologize. I will look it up by your phone number. Please give me 30 seconds.'",
+                    "B": "Preachy: 'Without the ID, the system won't let me access the data.'"
                 },
                 "consequences": {
-                    "A": {"next": "step_solution", "change": +10, "analysis": "✅ KHÁ: Biết sửa sai và chủ động tìm giải pháp."},
-                    "B": {"next": "game_over_bad_retail", "change": -20, "analysis": "❌ THẢM HỌA: Đôi co với khách hàng là điều tối kỵ."}
+                    "A": {"next": "step_solution", "change": +10, "analysis": "✅ FAIR: Fixing the mistake and finding a workaround."},
+                    "B": {"next": "game_over_bad_retail", "change": -20, "analysis": "❌ DISASTER: Arguing with the customer is forbidden."}
                 }
             },
             "game_over_good_retail": {
                 "type": "WIN",
-                "title": "🏆 XỬ LÝ XUẤT SẮC",
+                "title": "🏆 EXCELLENT HANDLING",
                 "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800",
-                "text": "Khách nhận bình mới lúc 5h chiều. Chị ấy rất cảm kích và giới thiệu công ty đặt quà tết bên bạn.",
+                "text": "Customer received the new vase at 5 PM. She was grateful and recommended your shop to her company.",
                 "score": 100
             },
             "game_over_fail_retail": {
                 "type": "LOSE",
-                "title": "😐 MẤT KHÁCH VIP",
+                "title": "😐 VIP LOST",
                 "img": "https://images.unsplash.com/photo-1444312645910-ffa973656eba?q=80&w=800",
-                "text": "Khách cúp máy đi mua chỗ khác. Bạn đúng quy trình nhưng công ty mất doanh thu lớn.",
+                "text": "Customer hung up and bought elsewhere. You followed the rules, but the company lost a VIP.",
                 "score": 40
             },
             "game_over_bad_retail": {
                 "type": "LOSE",
-                "title": "☠️ KHỦNG HOẢNG",
+                "title": "☠️ CRISIS",
                 "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800",
-                "text": "Bài bóc phốt nhận 10k share. Sếp gọi bạn lên phòng họp.",
+                "text": "Her angry post got 10k shares. The boss called you for a meeting.",
                 "score": 0
             }
         }
     },
 
     "SC_TECH_01": {
-        "title": "IT: Sự Cố Mất Mạng",
-        "desc": "Doanh nghiệp bị mất Internet giữa cuộc họp với đối tác nước ngoài.",
+        "title": "IT: Internet Outage",
+        "desc": "Business internet went down during a meeting with foreign partners.",
         "difficulty": "Medium",
         "customer": {
-            "name": "Anh Tuấn (Giám đốc IT)",
+            "name": "Mr. Ken (IT Director)",
             "avatar": "https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=400",
-            "traits": ["Logic", "Gấp gáp", "Chuyên môn cao"],
-            "spending": "Gói Enterprise"
+            "traits": ["Logical", "Urgent", "Expert"],
+            "spending": "Enterprise Plan"
         },
         "steps": {
             "start": {
                 "patience": 30,
                 "img": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=800",
-                "text": "Bên em làm ăn thế à? Đang họp với đối tác nước ngoài thì rớt mạng! Anh khởi động lại modem 3 lần rồi vẫn không được!",
+                "text": "Is this how you do business? I'm in a meeting and the net drops! I restarted the modem 3 times, still nothing!",
                 "choices": {
-                    "A": "Hỏi kỹ thuật: 'Anh ơi đèn PON trên modem đang sáng màu gì ạ?'",
-                    "B": "Xin lỗi chung chung: 'Dạ em xin lỗi anh ạ, chắc do đường truyền cá mập cắn cáp...'"
+                    "A": "Technical Q: 'Sir, what color is the PON light on your modem?'",
+                    "B": "Generic Apology: 'I am sorry sir, maybe a shark bit the cable...'"
                 },
                 "consequences": {
-                    "A": {"next": "step_check", "change": +10, "analysis": "✅ TỐT: Với dân IT, đi thẳng vào vấn đề kỹ thuật là cách nhanh nhất."},
-                    "B": {"next": "game_over_bad_tech", "change": -30, "analysis": "❌ TỆ: Đừng đổ lỗi khách quan khi chưa kiểm tra. Khách IT ghét nhất nghe văn mẫu."}
+                    "A": {"next": "step_check", "change": +10, "analysis": "✅ GOOD: With IT customers, getting straight to technical troubleshooting is best."},
+                    "B": {"next": "game_over_bad_tech", "change": -30, "analysis": "❌ BAD: Don't blame external factors without checking. IT people hate scripted excuses."}
                 }
             },
             "step_check": {
                 "patience": 40,
                 "img": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800",
-                "text": "Đèn nháy đỏ liên tục. Anh cần mạng trong 5 phút nữa. Có cho kỹ thuật qua ngay được không?",
+                "text": "It's flashing red. I need internet in 5 minutes. Can you send a technician NOW?",
                 "choices": {
-                    "A": "Điều phối: 'Em thấy tín hiệu quang bị đứt. Em điều kỹ thuật qua ngay, nhưng nhanh nhất mất 30 phút ạ.'",
-                    "B": "Giải pháp tạm thời: 'Dạ 30p kỹ thuật mới tới được. Anh dùng 4G backup tạm thời nhé? Em tặng anh gói data MAX SPEED ngay lập tức để chữa cháy.'"
+                    "A": "Dispatch: 'Signal is lost. I'm sending a tech, but the fastest is 30 mins.'",
+                    "B": "Temporary Fix: 'Tech takes 30 mins. Can you use 4G backup? I will add a MAX SPEED data package to your account immediately to save the meeting.'"
                 },
                 "consequences": {
-                    "A": {"next": "game_over_fail_tech", "change": -10, "analysis": "⚠️ TRUNG BÌNH: Trung thực là tốt, nhưng không giải quyết được vấn đề '5 phút' của khách."},
-                    "B": {"next": "game_over_good_tech", "change": +40, "analysis": "✅ XUẤT SẮC: Cung cấp giải pháp thay thế (Workaround) để cứu vãn cuộc họp là ưu tiên hàng đầu."}
+                    "A": {"next": "game_over_fail_tech", "change": -10, "analysis": "⚠️ AVERAGE: Honest, but doesn't solve the '5 minute' deadline."},
+                    "B": {"next": "game_over_good_tech", "change": +40, "analysis": "✅ EXCELLENT: Providing a Workaround to save the meeting is the top priority."}
                 }
             },
             "game_over_good_tech": {
                 "type": "WIN",
-                "title": "💡 GIẢI QUYẾT THÔNG MINH",
+                "title": "💡 SMART SOLUTION",
                 "img": "https://images.unsplash.com/photo-1552581234-26160f608093?q=80&w=800",
-                "text": "Anh Tuấn dùng 4G hoàn thành cuộc họp. Sau đó kỹ thuật tới sửa xong. Anh đánh giá cao sự linh hoạt.",
+                "text": "Mr. Ken used 4G to finish the meeting. The tech arrived later to fix the line. He appreciated the flexibility.",
                 "score": 90
             },
             "game_over_fail_tech": {
                 "type": "LOSE",
-                "title": "🕒 TRỄ GIỜ HỌP",
+                "title": "🕒 MEETING MISSED",
                 "img": "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=800",
-                "text": "30 phút sau kỹ thuật mới tới thì cuộc họp đã tan vỡ. Khách hàng rất thất vọng.",
+                "text": "30 mins later the meeting was already over. The customer was very disappointed.",
                 "score": 50
             },
             "game_over_bad_tech": {
                 "type": "LOSE",
-                "title": "🤬 CẮT HỢP ĐỒNG",
+                "title": "🤬 CONTRACT TERMINATED",
                 "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800",
-                "text": "Anh Tuấn yêu cầu cắt hợp đồng ngay lập tức vì thái độ thiếu chuyên nghiệp.",
+                "text": "Mr. Ken demanded to cancel the contract immediately due to unprofessionalism.",
                 "score": 0
             }
         }
@@ -428,7 +428,7 @@ ALL_SCENARIOS = {
 }
 
 # ==============================================================================
-# 3. LOGIC HỆ THỐNG (GAME ENGINE)
+# 3. GAME ENGINE LOGIC
 # ==============================================================================
 
 if 'current_scenario' not in st.session_state: st.session_state.current_scenario = None
@@ -451,14 +451,14 @@ def start_scenario(key):
 def make_choice(choice_key, step_data):
     consequence = step_data['consequences'][choice_key]
     
-    # Cập nhật trạng thái
+    # Update State
     st.session_state.current_step = consequence['next']
     st.session_state.patience_meter += consequence['change']
     
-    # Giới hạn 0-100
+    # Limit meter 0-100
     st.session_state.patience_meter = max(0, min(100, st.session_state.patience_meter))
     
-    # Lưu lịch sử
+    # Save History
     st.session_state.history.append({
         "step": step_data['text'],
         "choice": step_data['choices'][choice_key],
@@ -467,16 +467,16 @@ def make_choice(choice_key, step_data):
     })
 
 # ==============================================================================
-# 4. GIAO DIỆN CHÍNH
+# 4. MAIN INTERFACE
 # ==============================================================================
 
 # --- DASHBOARD ---
 if st.session_state.current_scenario is None:
     st.title("🎓 TRAINING MASTER PRO")
-    st.caption("Hệ thống đào tạo thực chiến (Version 3.0)")
+    st.caption("Real-world Situation Training System (Version 3.0)")
     st.divider()
     
-    # Hiển thị dạng lưới
+    # Grid Display
     cols = st.columns(2)
     count = 0
     for key, data in ALL_SCENARIOS.items():
@@ -485,15 +485,15 @@ if st.session_state.current_scenario is None:
                 st.subheader(f"{data['title']}")
                 st.write(f"📝 {data['desc']}")
                 
-                # Badge độ khó
+                # Difficulty Badge
                 if data['difficulty'] == 'Very Hard':
-                    st.markdown(":fire: Độ khó: **Rất Khó**")
+                    st.markdown(":fire: Difficulty: **Very Hard**")
                 elif data['difficulty'] == 'Hard':
-                    st.markdown(":warning: Độ khó: **Khó**")
+                    st.markdown(":warning: Difficulty: **Hard**")
                 else:
-                    st.markdown(":star: Độ khó: **Trung bình**")
+                    st.markdown(":star: Difficulty: **Medium**")
                     
-                if st.button(f"🚀 Bắt đầu ngay", key=f"btn_{key}", use_container_width=True):
+                if st.button(f"🚀 Start Now", key=f"btn_{key}", use_container_width=True):
                     start_scenario(key)
                     st.rerun()
         count += 1
@@ -507,7 +507,7 @@ else:
     
     # SIDEBAR
     with st.sidebar:
-        st.button("❌ Thoát kịch bản", on_click=reset_game, use_container_width=True)
+        st.button("❌ Exit Scenario", on_click=reset_game, use_container_width=True)
         st.divider()
         
         # Profile
@@ -517,18 +517,18 @@ else:
         
         st.markdown(f"""
         <div class="profile-card">
-            <p><b>Tính cách:</b> {', '.join(cust['traits'])}</p>
-            <p><b>Nhóm:</b> {cust['spending']}</p>
+            <p><b>Traits:</b> {', '.join(cust['traits'])}</p>
+            <p><b>Spending:</b> {cust['spending']}</p>
         </div>
         """, unsafe_allow_html=True)
         
         st.divider()
         
-        # Thanh Kiên Nhẫn
+        # Patience Meter
         patience = st.session_state.patience_meter
-        st.markdown(f"### 🌡️ Độ Kiên Nhẫn: {patience}/100")
+        st.markdown(f"### 🌡️ Patience Level: {patience}/100")
         
-        # Logic màu sắc thanh máu
+        # Color Logic
         color_hex = "#28a745" # Green
         if patience < 30: color_hex = "#dc3545" # Red
         elif patience < 70: color_hex = "#ffc107" # Orange
@@ -540,10 +540,10 @@ else:
         """, unsafe_allow_html=True)
         
         if patience <= 20 and patience > 0:
-             st.error("CẢNH BÁO: KHÁCH HÀNG SẮP BỎ ĐI!")
+             st.error("WARNING: CUSTOMER IS ABOUT TO LEAVE!")
 
     # MAIN AREA
-    if "type" in step_data: # Màn hình kết thúc
+    if "type" in step_data: # End Screen
         st.markdown(f"# {step_data['title']}")
         
         c1, c2 = st.columns([1, 1.5], gap="large")
@@ -556,48 +556,48 @@ else:
             else:
                 st.error(f"### {step_data['text']}")
             
-            st.metric("Điểm số của bạn", f"{step_data['score']}/100")
+            st.metric("Your Score", f"{step_data['score']}/100")
             
-            if st.button("🔄 Thử lại", use_container_width=True):
+            if st.button("🔄 Try Again", use_container_width=True):
                 start_scenario(s_key)
                 st.rerun()
         
         st.divider()
-        st.subheader("🕵️ PHÂN TÍCH CHUYÊN GIA")
+        st.subheader("🕵️ EXPERT ANALYSIS")
         for idx, item in enumerate(st.session_state.history):
-            with st.expander(f"Bước {idx+1}: {item['choice'][:50]}...", expanded=True):
-                st.write(f"💬 **Tình huống:** {item['step']}")
-                st.write(f"👉 **Bạn chọn:** {item['choice']}")
+            with st.expander(f"Step {idx+1}: You chose '{item['choice'][:30]}...'", expanded=True):
+                st.write(f"💬 **Situation:** {item['step']}")
+                st.write(f"👉 **Your Choice:** {item['choice']}")
                 
-                # Hiển thị phân tích đẹp hơn
+                # Analysis Display
                 style_class = "analysis-box-good" if item['change'] > 0 else "analysis-box-bad"
                 icon = "✅" if item['change'] > 0 else "❌"
                 sign = "+" if item['change'] > 0 else ""
                 
                 st.markdown(f"""
                 <div class="{style_class}">
-                    <b>{icon} Phân tích:</b> {item['analysis']} <br>
-                    (Độ kiên nhẫn: {sign}{item['change']})
+                    <b>{icon} Analysis:</b> {item['analysis']} <br>
+                    (Patience: {sign}{item['change']})
                 </div>
                 """, unsafe_allow_html=True)
 
-    else: # Màn hình chơi
+    else: # Playing Screen
         st.subheader(f"📍 {s_data['title']}")
         
         col_img, col_text = st.columns([1.5, 2], gap="large")
         
         with col_img:
-            st.image(step_data['img'], use_container_width=True, caption="Camera giám sát")
+            st.image(step_data['img'], use_container_width=True, caption="Surveillance Camera")
         
         with col_text:
             st.markdown(f"""
             <div class="chat-container">
-                <div class="customer-name">🗣️ {cust['name']} nói:</div>
+                <div class="customer-name">🗣️ {cust['name']} says:</div>
                 <div class="dialogue">"{step_data['text']}"</div>
             </div>
             """, unsafe_allow_html=True)
             
-            st.write("#### 👉 Bạn sẽ phản hồi thế nào?")
+            st.write("#### 👉 How do you respond?")
             
             for key, val in step_data['choices'].items():
                 if st.button(f"{key}. {val}", use_container_width=True):
