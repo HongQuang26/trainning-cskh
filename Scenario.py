@@ -7,8 +7,8 @@ import time
 # 1. CONFIGURATION & UI
 # ==============================================================================
 st.set_page_config(
-    page_title="Training Master V7 - Deep Dive",
-    page_icon="💎",
+    page_title="Service Hero Training", # Đã cập nhật tiêu đề Tab trình duyệt luôn cho đồng bộ
+    page_icon="🦸‍♂️",
     layout="wide"
 )
 
@@ -388,21 +388,26 @@ DB_FILE = "scenarios.json"
 
 def load_data():
     """Load from JSON or create using INITIAL_DATA."""
+    # Check if file exists
     if not os.path.exists(DB_FILE):
         with open(DB_FILE, 'w', encoding='utf-8') as f:
             json.dump(INITIAL_DATA, f, ensure_ascii=False, indent=4)
         return INITIAL_DATA
     
+    # If file exists, load it
     with open(DB_FILE, 'r', encoding='utf-8') as f:
         data = json.load(f)
         
-    # Auto-update: Add missing scenarios from code to JSON
+    # MERGE LOGIC: Add new hardcoded scenarios if they are missing in JSON
     updated = False
     for k, v in INITIAL_DATA.items():
         if k not in data:
             data[k] = v
             updated = True
-    if updated: save_data(data)
+    
+    if updated:
+        save_data(data)
+        
     return data
 
 def save_data(new_data):
@@ -507,7 +512,7 @@ with st.sidebar:
     st.title("🎛️ Menu")
     menu = st.radio("Navigate", ["Dashboard", "🛠️ Create New Scenario"])
     st.divider()
-    st.caption("Training Master v7.0")
+    st.caption("SERVICE HERO – INTERACTIVE TRAINING HUB")
 
 ALL_SCENARIOS = load_data()
 
@@ -517,7 +522,7 @@ if menu == "🛠️ Create New Scenario":
 
 elif menu == "Dashboard":
     if st.session_state.current_scenario is None:
-        st.title("🎓 TRAINING DASHBOARD")
+        st.title("SERVICE HERO – INTERACTIVE TRAINING HUB")
         st.caption(f"Total Scenarios: {len(ALL_SCENARIOS)}")
         st.divider()
         
