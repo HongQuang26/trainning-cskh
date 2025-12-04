@@ -7,7 +7,7 @@ import time
 # 1. CONFIGURATION & UI
 # ==============================================================================
 st.set_page_config(
-    page_title="Training Master V5",
+    page_title="Training Master V6 - Ultimate",
     page_icon="💎",
     layout="wide"
 )
@@ -38,84 +38,53 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. DATA MANAGEMENT (DEFAULT V3.0 CONTENT)
+# 2. HUGE DATASET (11 SCENARIOS)
 # ==============================================================================
-DB_FILE = "scenarios.json"
-
-# Đây là bộ dữ liệu gốc từ V3.0 (Tiếng Anh)
-DEFAULT_DATA = {
+# Đây là kho dữ liệu tích hợp sẵn (Hardcoded)
+INITIAL_DATA = {
+    # --- OLD SCENARIOS (5) ---
     "SC_FNB_01": {
         "title": "F&B: Foreign Object Incident",
         "desc": "Customer discovers a hair in their soup at a 5-star restaurant.",
         "difficulty": "Hard",
-        "customer": {
-            "name": "Ms. Jade", "avatar": "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?q=80&w=400",
-            "traits": ["Picky", "Famous Reviewer"], "spending": "New Customer"
-        },
+        "customer": {"name": "Ms. Jade", "avatar": "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?q=80&w=400", "traits": ["Picky", "Famous Reviewer"], "spending": "New Customer"},
         "steps": {
             "start": {
                 "patience": 30, "img": "https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?q=80&w=800",
                 "text": "Manager! Look at this! A long hair in my soup! Are you feeding me garbage?",
-                "choices": {
-                    "A": "Denial: 'That hair is blonde, our staff has black hair. Is it yours?'",
-                    "B": "Action: 'I am terribly sorry! I will remove this immediately.'"
-                },
-                "consequences": {
-                    "A": {"next": "game_over_bad", "change": -40, "analysis": "❌ Never blame the customer."},
-                    "B": {"next": "step_compensate", "change": +20, "analysis": "✅ Acknowledge and act fast."}
-                }
+                "choices": {"A": "Denial: 'That hair is blonde, our staff has black hair. Is it yours?'", "B": "Action: 'I am terribly sorry! I will remove this immediately.'"},
+                "consequences": {"A": {"next": "game_over_bad", "change": -40, "analysis": "❌ Never blame the customer."}, "B": {"next": "step_compensate", "change": +20, "analysis": "✅ Acknowledge and act fast."}}
             },
             "step_compensate": {
                 "patience": 50, "img": "https://images.unsplash.com/photo-1552581234-26160f608093?q=80&w=800",
                 "text": "My appetite is gone. How will you fix this?",
-                "choices": {
-                    "A": "Standard: 'New soup + 10% discount.'",
-                    "B": "WOW: 'Free meal tonight + Special dessert.'"
-                },
-                "consequences": {
-                    "A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ 10% is not enough for a hygiene issue."},
-                    "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Over-compensation saves reputation."}
-                }
+                "choices": {"A": "Standard: 'New soup + 10% discount.'", "B": "WOW: 'Free meal tonight + Special dessert.'"},
+                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ 10% is not enough."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Over-compensation saves reputation."}}
             },
-            "game_over_good": {"type": "WIN", "title": "TRUST RESTORED", "text": "She wrote a great review about your professionalism.", "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "CUSTOMER LOST", "text": "She left unhappy and rated 2 stars.", "img": "https://images.unsplash.com/photo-1522029916167-9c1a97aa3c24?q=80&w=800", "score": 40},
-            "game_over_bad": {"type": "LOSE", "title": "PR DISASTER", "text": "She posted a viral TikTok exposing the restaurant.", "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800", "score": 0}
+            "game_over_good": {"type": "WIN", "title": "TRUST RESTORED", "text": "She wrote a great review.", "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "CUSTOMER LOST", "text": "She left unhappy.", "img": "https://images.unsplash.com/photo-1522029916167-9c1a97aa3c24?q=80&w=800", "score": 40},
+            "game_over_bad": {"type": "LOSE", "title": "PR DISASTER", "text": "Viral TikTok exposing the restaurant.", "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800", "score": 0}
         }
     },
     "SC_HOTEL_01": {
         "title": "Hotel: Overbooked",
         "desc": "Honeymoon couple arrives, Ocean View room is unavailable.",
         "difficulty": "Very Hard",
-        "customer": {
-            "name": "Mr. Mike", "avatar": "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?q=80&w=400",
-            "traits": ["Tired", "High Expectations"], "spending": "Honeymoon Package"
-        },
+        "customer": {"name": "Mr. Mike", "avatar": "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?q=80&w=400", "traits": ["Tired", "High Expectations"], "spending": "Honeymoon"},
         "steps": {
             "start": {
                 "patience": 20, "img": "https://images.unsplash.com/photo-1542596594-6eb9880fb7a6?q=80&w=800",
                 "text": "I booked Ocean View months ago! I will NOT accept a Garden View!",
-                "choices": {
-                    "A": "Blame System: 'System error. Sorry.'",
-                    "B": "Ownership: 'This is our fault. I apologize.'"
-                },
-                "consequences": {
-                    "A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Don't blame the system."},
-                    "B": {"next": "step_upgrade", "change": +20, "analysis": "✅ Take ownership immediately."}
-                }
+                "choices": {"A": "Blame System: 'System error. Sorry.'", "B": "Ownership: 'This is our fault. I apologize.'"},
+                "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Don't blame the system."}, "B": {"next": "step_upgrade", "change": +20, "analysis": "✅ Take ownership immediately."}}
             },
             "step_upgrade": {
                 "patience": 40, "img": "https://images.unsplash.com/photo-1618773928121-c32242e63f39?q=80&w=800",
                 "text": "But we dreamed about the ocean...",
-                "choices": {
-                    "A": "Upgrade: 'Free upgrade to Presidential Suite.'",
-                    "B": "Refund: 'Refund difference + 20% off.'"
-                },
-                "consequences": {
-                    "A": {"next": "game_over_good", "change": +60, "analysis": "🏆 Give something better to fix the mood."},
-                    "B": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Money doesn't fix a ruined honeymoon."}
-                }
+                "choices": {"A": "Upgrade: 'Free upgrade to Presidential Suite.'", "B": "Refund: 'Refund difference + 20% off.'"},
+                "consequences": {"A": {"next": "game_over_good", "change": +60, "analysis": "🏆 Give something better to fix the mood."}, "B": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Money doesn't fix a ruined honeymoon."}}
             },
-            "game_over_good": {"type": "WIN", "title": "DREAM TRIP", "text": "They loved the Suite and forgot the issue.", "img": "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?q=80&w=800", "score": 100},
+            "game_over_good": {"type": "WIN", "title": "DREAM TRIP", "text": "They loved the Suite.", "img": "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?q=80&w=800", "score": 100},
             "game_over_fail": {"type": "LOSE", "title": "SAD TRIP", "text": "They stayed but won't return.", "img": "https://images.unsplash.com/photo-1583323731095-d7c9bd2690f6?q=80&w=800", "score": 40},
             "game_over_bad": {"type": "LOSE", "title": "LOBBY RAGE", "text": "They demanded a full refund and left.", "img": "https://images.unsplash.com/photo-1574790502501-701452c15414?q=80&w=800", "score": 0}
         }
@@ -124,49 +93,28 @@ DEFAULT_DATA = {
         "title": "Online: Lost Package",
         "desc": "App says 'Delivered' but customer has nothing.",
         "difficulty": "Medium",
-        "customer": {
-            "name": "Tom", "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=400",
-            "traits": ["Worried", "Suspicious"], "spending": "Low"
-        },
+        "customer": {"name": "Tom", "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=400", "traits": ["Worried", "Suspicious"], "spending": "Low"},
         "steps": {
             "start": {
                 "patience": 40, "img": "https://images.unsplash.com/photo-1566576912321-d58ba2188273?q=80&w=800",
                 "text": "App says delivered, I have nothing! Did the driver steal it?",
-                "choices": {
-                    "A": "Deflect: 'Check with neighbors.'",
-                    "B": "Reassure: 'We take full responsibility.'"
-                },
-                "consequences": {
-                    "A": {"next": "step_panic", "change": -20, "analysis": "⚠️ Don't push back."},
-                    "B": {"next": "step_investigate", "change": +20, "analysis": "✅ Be on their side."}
-                }
+                "choices": {"A": "Deflect: 'Check with neighbors.'", "B": "Reassure: 'We take full responsibility.'"},
+                "consequences": {"A": {"next": "step_panic", "change": -20, "analysis": "⚠️ Don't push back."}, "B": {"next": "step_investigate", "change": +20, "analysis": "✅ Be on their side."}}
             },
             "step_panic": {
                 "patience": 20, "img": "https://images.unsplash.com/photo-1633934542430-0905ccb5f050?q=80&w=800",
                 "text": "This is a scam! Refund me!",
-                "choices": {
-                    "A": "Firm: 'Calm down.'",
-                    "B": "Promise: 'If not found by 6PM, we ship a new one.'",
-                },
-                "consequences": {
-                    "A": {"next": "game_over_bad", "change": -20, "analysis": "❌ Telling them to calm down makes it worse."},
-                    "B": {"next": "game_over_good", "change": +50, "analysis": "✅ Worst-case guarantee works wonders."}
-                }
+                "choices": {"A": "Firm: 'Calm down.'", "B": "Promise: 'If not found by 6PM, we ship a new one.'"},
+                "consequences": {"A": {"next": "game_over_bad", "change": -20, "analysis": "❌ Antagonistic."}, "B": {"next": "game_over_good", "change": +50, "analysis": "✅ Worst-case guarantee works."}}
             },
             "step_investigate": {
                 "patience": 60, "img": "https://images.unsplash.com/photo-1528736047006-d320da8a2437?q=80&w=800",
-                "text": "Driver left it at the back gate security. Sorry.",
-                "choices": {
-                    "A": "Simple: 'Please go get it.'",
-                    "B": "Thoughtful: 'Sorry for the worry. Here is a voucher.'"
-                },
-                "consequences": {
-                    "A": {"next": "game_over_normal", "change": +10, "analysis": "🙂 Average experience."},
-                    "B": {"next": "game_over_good_found", "change": +30, "analysis": "✅ Small gift smooths things over."}
-                }
+                "text": "Driver left it at the back gate security.",
+                "choices": {"A": "Simple: 'Please go get it.'", "B": "Thoughtful: 'Sorry for the worry. Here is a voucher.'"},
+                "consequences": {"A": {"next": "game_over_normal", "change": +10, "analysis": "🙂 Average experience."}, "B": {"next": "game_over_good_found", "change": +30, "analysis": "✅ Small gift smooths things over."}}
             },
-            "game_over_good": {"type": "WIN", "title": "RESCUE", "text": "You shipped a new pair. Loyal customer gained.", "img": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=800", "score": 100},
-            "game_over_good_found": {"type": "WIN", "title": "FOUND", "text": "He got the package and appreciated the voucher.", "img": "https://images.unsplash.com/photo-1556740758-90de374c12ad?q=80&w=800", "score": 90},
+            "game_over_good": {"type": "WIN", "title": "RESCUE", "text": "Shipped a new pair. Loyal customer.", "img": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=800", "score": 100},
+            "game_over_good_found": {"type": "WIN", "title": "FOUND", "text": "He appreciated the voucher.", "img": "https://images.unsplash.com/photo-1556740758-90de374c12ad?q=80&w=800", "score": 90},
             "game_over_normal": {"type": "WIN", "title": "RECEIVED", "text": "He got it but was annoyed.", "img": "https://images.unsplash.com/photo-1598942610451-9573a059795c?q=80&w=800", "score": 70},
             "game_over_bad": {"type": "LOSE", "title": "TRUST LOST", "text": "He reported the shop.", "img": "https://images.unsplash.com/photo-1586866016892-117e620d5520?q=80&w=800", "score": 10}
         }
@@ -222,17 +170,174 @@ DEFAULT_DATA = {
             "lose": {"type": "LOSE", "title": "FAILED", "text": "Meeting missed.", "img": "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=800", "score": 50},
             "bad": {"type": "LOSE", "title": "FIRED", "text": "Contract cancelled.", "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800", "score": 0}
         }
+    },
+
+    # --- 6 NEW SCENARIOS (ADDED DIRECTLY) ---
+    "SC_AIRLINE_01": {
+        "title": "Airline: Flight Cancelled",
+        "desc": "Flight cancelled due to weather. Passenger will miss a vital wedding.",
+        "difficulty": "Very Hard",
+        "customer": {"name": "Mr. David", "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=400", "traits": ["Stressed", "Time-critical"], "spending": "Gold Flyer"},
+        "steps": {
+            "start": {
+                "patience": 20, "img": "https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f?q=80&w=800",
+                "text": "Cancelled?! I am the best man at a wedding in 6 hours! Get me on a plane NOW!",
+                "choices": {"A": "Blame Weather: 'It's a typhoon. Please understand.'", "B": "Empathy: 'Oh no! Let me check all partner airlines immediately.'"},
+                "consequences": {"A": {"next": "lose", "change": -30, "analysis": "❌ Don't hide behind 'weather' when emotions are high."}, "B": {"next": "step_opt", "change": +30, "analysis": "✅ Excellent acknowledgment."}}
+            },
+            "step_opt": {
+                "patience": 50, "img": "https://images.unsplash.com/photo-1580894908361-967195033215?q=80&w=800",
+                "text": "Checking isn't enough! Do whatever it takes!",
+                "choices": {"A": "Standard: 'Next flight is tomorrow.'", "B": "Creative: 'Partner flight from nearby city. We cover taxi.'"},
+                "consequences": {"A": {"next": "fail", "change": -20, "analysis": "⚠️ Tomorrow is too late."}, "B": {"next": "win", "change": +50, "analysis": "🏆 Going the extra mile."}}
+            },
+            "win": {"type": "WIN", "title": "SAVED THE DAY", "text": "He made it. Thank you email sent.", "img": "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800", "score": 100},
+            "fail": {"type": "LOSE", "title": "MISSED WEDDING", "text": "He missed it. Never flying again.", "img": "https://images.unsplash.com/photo-1610128070660-d90571d7192c?q=80&w=800", "score": 40},
+            "lose": {"type": "LOSE", "title": "MELTDOWN", "text": "Security called.", "img": "https://images.unsplash.com/photo-1574790502501-701452c15414?q=80&w=800", "score": 0}
+        }
+    },
+    "SC_BANK_01": {
+        "title": "Banking: ATM Ate Card",
+        "desc": "ATM swallowed card on Saturday night. Elderly customer needs cash.",
+        "difficulty": "Hard",
+        "customer": {"name": "Mrs. Evelyn", "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=400", "traits": ["Elderly", "Panicked"], "spending": "Loyal"},
+        "steps": {
+            "start": {
+                "patience": 30, "img": "https://images.unsplash.com/photo-1601597111637-3229586107b5?q=80&w=800",
+                "text": "Help! Machine stole my card! I need cash for medicine! Branch is closed!",
+                "choices": {"A": "Protocol: 'Come back Monday with ID.'", "B": "Reassure: 'Card is safe. Let's get you cash cardless.'"},
+                "consequences": {"A": {"next": "lose", "change": -30, "analysis": "❌ Dangerous to tell elderly to wait for medicine."}, "B": {"next": "step_sol", "change": +30, "analysis": "✅ Prioritize immediate needs."}}
+            },
+            "step_sol": {
+                "patience": 60, "img": "https://images.unsplash.com/photo-1563013544-824ae1b704d3?q=80&w=800",
+                "text": "Cash without card? I don't understand technology.",
+                "choices": {"A": "Instruction: 'Use the app.'", "B": "Guided: 'Stay on the phone. I will guide you step by step.'"},
+                "consequences": {"A": {"next": "fail", "change": -20, "analysis": "⚠️ Don't confuse her."}, "B": {"next": "win", "change": +40, "analysis": "🏆 Hand-holding is key."}}
+            },
+            "win": {"type": "WIN", "title": "CASH SECURED", "text": "She got her medicine.", "img": "https://images.unsplash.com/photo-1556742031-c6961e8560b0?q=80&w=800", "score": 100},
+            "fail": {"type": "LOSE", "title": "GAVE UP", "text": "She couldn't do it.", "img": "https://images.unsplash.com/photo-1573497491208-6b1acb260507?q=80&w=800", "score": 30},
+            "lose": {"type": "LOSE", "title": "LOST TRUST", "text": "She left the bank.", "img": "https://images.unsplash.com/photo-1522029916167-9c1a97aa3c24?q=80&w=800", "score": 0}
+        }
+    },
+    "SC_REALESTATE_01": {
+        "title": "Real Estate: Moldy Apartment",
+        "desc": "Tenant found mold in luxury apartment.",
+        "difficulty": "Very Hard",
+        "customer": {"name": "Mr. Chen", "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400", "traits": ["Rich", "Health-conscious"], "spending": "Luxury"},
+        "steps": {
+            "start": {
+                "patience": 20, "img": "https://images.unsplash.com/photo-1581876883325-32a5b8f7fb5a?q=80&w=800",
+                "text": "I pay $4000/month and found toxic mold! My son has asthma!",
+                "choices": {"A": "Defensive: 'Did you keep windows closed?'", "B": "Alarmed: 'Omg, get out of that room. I am coming.'"},
+                "consequences": {"A": {"next": "lose", "change": -40, "analysis": "❌ Don't blame tenant."}, "B": {"next": "step_act", "change": +30, "analysis": "✅ Treat as health emergency."}}
+            },
+            "step_act": {
+                "patience": 50, "img": "https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=800",
+                "text": "We cannot stay here tonight.",
+                "choices": {"A": "Standard: 'Use other bedroom.'", "B": "Luxury: 'I booked a 5-star hotel for you.'"},
+                "consequences": {"A": {"next": "fail", "change": -20, "analysis": "⚠️ Unacceptable for luxury."}, "B": {"next": "win", "change": +50, "analysis": "🏆 Matches price point."}}
+            },
+            "win": {"type": "WIN", "title": "CRISIS AVERTED", "text": "Family happy with hotel.", "img": "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=800", "score": 100},
+            "fail": {"type": "LOSE", "title": "LEASE BROKEN", "text": "They left.", "img": "https://images.unsplash.com/photo-1596496321628-16711bb94e68?q=80&w=800", "score": 30},
+            "lose": {"type": "LOSE", "title": "LAWSUIT", "text": "Legal battle incoming.", "img": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=800", "score": 0}
+        }
+    },
+    "SC_SAAS_01": {
+        "title": "SaaS: Data Loss",
+        "desc": "System update deleted critical data before client deadline.",
+        "difficulty": "Very Hard",
+        "customer": {"name": "Sarah", "avatar": "https://images.unsplash.com/photo-1573496799652-408c2ac9fe98?q=80&w=400", "traits": ["Furious", "High stakes"], "spending": "Enterprise"},
+        "steps": {
+            "start": {
+                "patience": 10, "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800",
+                "text": "WHERE IS OUR DATA?! We have a presentation in 2 hours!",
+                "choices": {"A": "Standard: 'Clear cache?'", "B": "Emergency: 'This is SEV1. Escalating now.'"},
+                "consequences": {"A": {"next": "lose", "change": -20, "analysis": "❌ Insulting suggestion."}, "B": {"next": "step_upd", "change": +30, "analysis": "✅ Correct severity identification."}}
+            },
+            "step_upd": {
+                "patience": 40, "img": "https://images.unsplash.com/photo-1551434678-e076c223a692?q=80&w=800",
+                "text": "My CEO is asking. Am I going to get fired?",
+                "choices": {"A": "Slow: 'Wait 2 hours.'", "B": "Mitigation: 'I will call your CEO and take the blame.'"},
+                "consequences": {"A": {"next": "fail", "change": -10, "analysis": "⚠️ Not enough."}, "B": {"next": "win", "change": +50, "analysis": "🏆 Ultimate partnership."}}
+            },
+            "win": {"type": "WIN", "title": "SAVED", "text": "Sarah safe, contract renewed.", "img": "https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=800", "score": 100},
+            "fail": {"type": "LOSE", "title": "CHURNED", "text": "Missed deadline.", "img": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=800", "score": 30},
+            "lose": {"type": "LOSE", "title": "LEGAL", "text": "Breach of contract.", "img": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=800", "score": 0}
+        }
+    },
+    "SC_SPA_01": {
+        "title": "Spa: Allergy",
+        "desc": "Bad reaction to facial treatment.",
+        "difficulty": "Hard",
+        "customer": {"name": "Ms. Chloe", "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=400", "traits": ["Scared", "Pain"], "spending": "New"},
+        "steps": {
+            "start": {
+                "patience": 30, "img": "https://images.unsplash.com/photo-1501594256690-b7a1a14527c5?q=80&w=800",
+                "text": "My face is burning! What did you do?!",
+                "choices": {"A": "Form: 'You checked No Allergies.'", "B": "Medical: 'Sit down. Medic!'" },
+                "consequences": {"A": {"next": "lose", "change": -30, "analysis": "❌ Victim blaming."}, "B": {"next": "step_care", "change": +30, "analysis": "✅ Health first."}}
+            },
+            "step_care": {
+                "patience": 50, "img": "https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=800",
+                "text": "I have an audition tomorrow! If I lose it, it's your fault.",
+                "choices": {"A": "Liability: 'We followed procedure.'", "B": "Support: 'We cover dermatologist bills.'"},
+                "consequences": {"A": {"next": "fail", "change": -20, "analysis": "⚠️ Too cold."}, "B": {"next": "win", "change": +50, "analysis": "🏆 Focus on helping her."}}
+            },
+            "win": {"type": "WIN", "title": "MANAGED", "text": "Swelling down. No lawsuit.", "img": "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=800", "score": 100},
+            "fail": {"type": "LOSE", "title": "BAD REP", "text": "Bad word of mouth.", "img": "https://images.unsplash.com/photo-1522029916167-9c1a97aa3c24?q=80&w=800", "score": 40},
+            "lose": {"type": "LOSE", "title": "NEGLIGENCE", "text": "Lawsuit filed.", "img": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=800", "score": 0}
+        }
+    },
+    "SC_LOGISTICS_01": {
+        "title": "Logistics: Damaged Shipment",
+        "desc": "Event equipment arrived broken.",
+        "difficulty": "Very Hard",
+        "customer": {"name": "Mr. Robert", "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400", "traits": ["Pressure", "Furious"], "spending": "Key Account"},
+        "steps": {
+            "start": {
+                "patience": 10, "img": "https://images.unsplash.com/photo-1586864387967-d021563e6516?q=80&w=800",
+                "text": "Late and smashed! Event is tomorrow! You destroyed a $500k event!",
+                "choices": {"A": "Insurance: 'File a claim.'", "B": "Crisis Mode: 'I am fixing this personally.'"},
+                "consequences": {"A": {"next": "lose", "change": -30, "analysis": "❌ Bureaucracy kills."}, "B": {"next": "step_fix", "change": +40, "analysis": "✅ Operational rescue needed."}}
+            },
+            "step_fix": {
+                "patience": 40, "img": "https://images.unsplash.com/photo-1494412651409-4963d24a38b8?q=80&w=800",
+                "text": "How? No time to order new ones!",
+                "choices": {"A": "Try: 'We'll try rentals.'", "B": "Guarantee: 'Chartering private truck overnight.'"},
+                "consequences": {"A": {"next": "fail", "change": -10, "analysis": "⚠️ Trying isn't enough."}, "B": {"next": "win", "change": +50, "analysis": "🏆 Extreme measures required."}}
+            },
+            "win": {"type": "WIN", "title": "SAVED", "text": "Arrived at dawn.", "img": "https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=800", "score": 100},
+            "fail": {"type": "LOSE", "title": "RUINED", "text": "Event failed.", "img": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=800", "score": 30},
+            "lose": {"type": "LOSE", "title": "FIRED", "text": "Account lost.", "img": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=800", "score": 0}
+        }
     }
 }
 
+DB_FILE = "scenarios.json"
+
 def load_data():
-    """Load scenarios from JSON or create default."""
+    """Load from JSON or create using INITIAL_DATA."""
+    # Check if file exists
     if not os.path.exists(DB_FILE):
         with open(DB_FILE, 'w', encoding='utf-8') as f:
-            json.dump(DEFAULT_DATA, f, ensure_ascii=False, indent=4)
-        return DEFAULT_DATA
+            json.dump(INITIAL_DATA, f, ensure_ascii=False, indent=4)
+        return INITIAL_DATA
+    
+    # If file exists, load it
     with open(DB_FILE, 'r', encoding='utf-8') as f:
-        return json.load(f)
+        data = json.load(f)
+        
+    # MERGE LOGIC: Add new hardcoded scenarios if they are missing in JSON
+    updated = False
+    for k, v in INITIAL_DATA.items():
+        if k not in data:
+            data[k] = v
+            updated = True
+    
+    if updated:
+        save_data(data)
+        
+    return data
 
 def save_data(new_data):
     with open(DB_FILE, 'w', encoding='utf-8') as f:
@@ -247,7 +352,7 @@ def delete_scenario(key):
     return False
 
 # ==============================================================================
-# 3. SCENARIO CREATOR LOGIC
+# 3. CREATOR & GAME LOGIC
 # ==============================================================================
 def create_new_scenario_ui():
     st.header("🛠️ Create New Scenario")
@@ -306,9 +411,6 @@ def create_new_scenario_ui():
                 time.sleep(1)
                 st.rerun()
 
-# ==============================================================================
-# 4. GAME ENGINE
-# ==============================================================================
 if 'current_scenario' not in st.session_state: st.session_state.current_scenario = None
 if 'current_step' not in st.session_state: st.session_state.current_step = None
 if 'patience_meter' not in st.session_state: st.session_state.patience_meter = 50
@@ -333,13 +435,13 @@ def make_choice(choice_key, step_data):
     })
 
 # ==============================================================================
-# 5. MAIN APP
+# 4. MAIN APP
 # ==============================================================================
 with st.sidebar:
     st.title("🎛️ Menu")
     menu = st.radio("Navigate", ["Dashboard", "🛠️ Create New Scenario"])
     st.divider()
-    st.caption("Training Master v5.0")
+    st.caption("Training Master v6.0")
 
 ALL_SCENARIOS = load_data()
 
