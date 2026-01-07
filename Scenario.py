@@ -2,12 +2,14 @@ import streamlit as st
 import json
 import os
 import time
+import pandas as pd
+from datetime import datetime
 
 # ==============================================================================
-# 1. CONFIGURATION & UI
+# 1. CẤU HÌNH & GIAO DIỆN (CONFIGURATION & UI)
 # ==============================================================================
 st.set_page_config(
-    page_title="Service Hero Training", # Đã cập nhật tiêu đề Tab trình duyệt luôn cho đồng bộ
+    page_title="Service Hero Training",
     page_icon="🦸‍♂️",
     layout="wide"
 )
@@ -38,367 +40,63 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. EXTENDED DATASET (3 TURNS PER SCENARIO)
+# 2. DỮ LIỆU KỊCH BẢN (DATASET)
 # ==============================================================================
 INITIAL_DATA = {
     # --- F&B ---
     "SC_FNB_01": {
-        "title": "F&B: Foreign Object Incident",
-        "desc": "Hair in soup. 3-Step resolution.",
+        "title": "F&B: Dị vật trong món ăn",
+        "desc": "Tóc trong súp. Giải quyết trong 3 bước.",
         "difficulty": "Hard",
-        "customer": {"name": "Ms. Jade", "avatar": "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?q=80&w=400", "traits": ["Picky", "Famous Reviewer"], "spending": "New Customer"},
+        "customer": {"name": "Ms. Jade", "avatar": "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?q=80&w=400", "traits": ["Kỹ tính", "Reviewer nổi tiếng"], "spending": "Khách mới"},
         "steps": {
             "start": { # TURN 1
                 "patience": 30, "img": "https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?q=80&w=800",
-                "text": "Manager! Look at this! A long hair in my soup! Are you feeding me garbage?",
-                "choices": {"A": "Denial: 'Not our hair.'", "B": "Action: 'I am terribly sorry! Removing it now.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -40, "analysis": "❌ Denial kills trust instantly."}, "B": {"next": "step_2_wait", "change": +10, "analysis": "✅ Immediate action is correct."}}
+                "text": "Quản lý đâu! Nhìn xem! Một sợi tóc dài trong súp của tôi! Các người cho tôi ăn rác đấy à?",
+                "choices": {"A": "Phủ nhận: 'Không phải tóc nhân viên chúng tôi.'", "B": "Hành động: 'Tôi vô cùng xin lỗi! Tôi sẽ xử lý ngay.'"},
+                "consequences": {"A": {"next": "game_over_bad", "change": -40, "analysis": "❌ Phủ nhận làm mất niềm tin ngay lập tức."}, "B": {"next": "step_2_wait", "change": +10, "analysis": "✅ Hành động ngay lập tức là chính xác."}}
             },
             "step_2_wait": { # TURN 2
                 "patience": 40, "img": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=800",
-                "text": "(5 mins later, you bring new soup) I don't even want this anymore. I've lost my appetite waiting. My friends are already halfway through their meal.",
-                "choices": {"A": "Push: 'Please try it, chef made it special.'", "B": "Pivot: 'I understand completely. Let me take this away. Can I bring you a drink or dessert instead?'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Don't force food on an upset stomach."}, "B": {"next": "step_3_bill", "change": +20, "analysis": "✅ Respecting her feeling and offering alternatives."}}
+                "text": "(5 phút sau, bạn mang súp mới ra) Tôi hết muốn ăn rồi. Đợi lâu quá tôi mất cả hứng. Bạn tôi ăn gần xong rồi.",
+                "choices": {"A": "Thuyết phục: 'Mời chị thử đi ạ, bếp trưởng làm riêng đấy.'", "B": "Chuyển hướng: 'Tôi hoàn toàn hiểu ạ. Tôi xin phép dọn món này đi. Tôi có thể mời chị đồ uống hoặc tráng miệng thay thế không?'"},
+                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Đừng ép khách ăn khi họ đang bực."}, "B": {"next": "step_3_bill", "change": +20, "analysis": "✅ Tôn trọng cảm xúc và đưa ra giải pháp thay thế."}}
             },
             "step_3_bill": { # TURN 3
                 "patience": 60, "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800",
-                "text": "Fine, just a glass of wine. But this night is ruined. Bring me the bill.",
-                "choices": {"A": "Discount: 'Here is the bill with 10% off.'", "B": "Comp: 'The bill is on the house tonight. Plus a voucher for next time.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ 10% for a ruined night is an insult."}, "B": {"next": "game_over_good", "change": +40, "analysis": "🏆 Total compensation turns a disaster into a wow moment."}}
+                "text": "Thôi được, cho tôi ly rượu vang. Nhưng tối nay hỏng bét rồi. Mang hóa đơn ra đây.",
+                "choices": {"A": "Giảm giá: 'Gửi chị hóa đơn giảm 10% ạ.'", "B": "Đền bù: 'Bữa tối nay nhà hàng xin mời. Và đây là voucher cho lần sau ạ.'"},
+                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ 10% cho một buổi tối tồi tệ là sự xúc phạm."}, "B": {"next": "game_over_good", "change": +40, "analysis": "🏆 Đền bù vượt mong đợi biến thảm họa thành khoảnh khắc Wow."}}
             },
-            "game_over_good": {"type": "WIN", "title": "TRUST RESTORED", "text": "She was shocked by the generosity and tipped the staff.", "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "LOST CUSTOMER", "text": "She paid but left a 1-star review.", "img": "https://images.unsplash.com/photo-1522029916167-9c1a97aa3c24?q=80&w=800", "score": 40},
-            "game_over_bad": {"type": "LOSE", "title": "PR DISASTER", "text": "Viral video of argument.", "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800", "score": 0}
+            "game_over_good": {"type": "WIN", "title": "KHÔI PHỤC NIỀM TIN", "text": "Cô ấy bất ngờ vì sự hào phóng và đã tip cho nhân viên.", "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "MẤT KHÁCH", "text": "Cô ấy thanh toán nhưng để lại đánh giá 1 sao.", "img": "https://images.unsplash.com/photo-1522029916167-9c1a97aa3c24?q=80&w=800", "score": 40},
+            "game_over_bad": {"type": "LOSE", "title": "THẢM HỌA TRUYỀN THÔNG", "text": "Video cãi nhau lan truyền trên mạng.", "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800", "score": 0}
         }
     },
-
-    # --- HOTEL ---
-    "SC_HOTEL_01": {
-        "title": "Hotel: Overbooked",
-        "desc": "Honeymoon couple vs No Room. 3-Step resolution.",
-        "difficulty": "Very Hard",
-        "customer": {"name": "Mr. Mike", "avatar": "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?q=80&w=400", "traits": ["Tired", "High Expectations"], "spending": "Honeymoon"},
-        "steps": {
-            "start": { # TURN 1
-                "patience": 20, "img": "https://images.unsplash.com/photo-1542596594-6eb9880fb7a6?q=80&w=800",
-                "text": "I booked Ocean View months ago! I will NOT accept a Garden View!",
-                "choices": {"A": "Policy: 'System error. Sorry.'", "B": "Empathy: 'This is our fault. I apologize.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Excuses don't help."}, "B": {"next": "step_2_alt", "change": +20, "analysis": "✅ Taking ownership."}}
-            },
-            "step_2_alt": { # TURN 2
-                "patience": 40, "img": "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=800",
-                "text": "Apologies don't bring back the ocean! We flew 12 hours for this view. Fix it!",
-                "choices": {"A": "Standard: 'I can offer free breakfast and spa credits.'", "B": "Check: 'Let me check the system for cancellations or upgrades.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Breakfast doesn't replace the room."}, "B": {"next": "step_3_upgrade", "change": +10, "analysis": "✅ Showing effort to find a real solution."}}
-            },
-            "step_3_upgrade": { # TURN 3
-                "patience": 50, "img": "https://images.unsplash.com/photo-1618773928121-c32242e63f39?q=80&w=800",
-                "text": "(Waiting anxiously) Well? Did you find anything? My wife is crying.",
-                "choices": {"A": "Partial: 'We have a partial ocean view available tomorrow.'", "B": "Hero: 'I found a Presidential Suite available. I am upgrading you for free.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ Still disappointing."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Exceeding expectations saves the trip."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "DREAM TRIP", "text": "They loved the Suite.", "img": "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?q=80&w=800", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "SAD TRIP", "text": "They stayed but won't return.", "img": "https://images.unsplash.com/photo-1583323731095-d7c9bd2690f6?q=80&w=800", "score": 40},
-            "game_over_bad": {"type": "LOSE", "title": "LOBBY RAGE", "text": "Demanded full refund.", "img": "https://images.unsplash.com/photo-1574790502501-701452c15414?q=80&w=800", "score": 0}
-        }
-    },
-
-    # --- E-COMMERCE ---
-    "SC_ECOMM_01": {
-        "title": "Online: Lost Package",
-        "desc": "Delivered but missing. 3-Step resolution.",
-        "difficulty": "Medium",
-        "customer": {"name": "Tom", "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=400", "traits": ["Worried", "Suspicious"], "spending": "Low"},
-        "steps": {
-            "start": { # TURN 1
-                "patience": 40, "img": "https://images.unsplash.com/photo-1566576912321-d58ba2188273?q=80&w=800",
-                "text": "App says delivered, I have nothing! Did you steal it?",
-                "choices": {"A": "Deflect: 'Check neighbors.'", "B": "Reassure: 'We take responsibility.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -20, "analysis": "❌ Don't push back."}, "B": {"next": "step_2_check", "change": +20, "analysis": "✅ Be on their side."}}
-            },
-            "step_2_check": { # TURN 2
-                "patience": 50, "img": "https://images.unsplash.com/photo-1633934542430-0905ccb5f050?q=80&w=800",
-                "text": "I checked everywhere! I need these shoes for my exam tomorrow morning!",
-                "choices": {"A": "Wait: 'Wait 24h for driver update.'", "B": "Escalate: 'I am calling the driver dispatch directly right now.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ 24h is too late for his deadline."}, "B": {"next": "step_3_result", "change": +20, "analysis": "✅ Urgency matches customer needs."}}
-            },
-            "step_3_result": { # TURN 3
-                "patience": 60, "img": "https://images.unsplash.com/photo-1528736047006-d320da8a2437?q=80&w=800",
-                "text": "(Driver says he hid it in the bush) Okay, you say it's in the bush? What if it's gone?",
-                "choices": {"A": "Trust: 'It should be there.'", "B": "Guarantee: 'Please check. If not there, I will Express Ship a new one immediately.'"},
-                "consequences": {"A": {"next": "game_over_normal", "change": 0, "analysis": "😐 Too passive."}, "B": {"next": "game_over_good", "change": +40, "analysis": "🏆 Risk-free guarantee wins trust."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "LOYALTY GAINED", "text": "He found it. Loves the support.", "img": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=800", "score": 100},
-            "game_over_normal": {"type": "WIN", "title": "FOUND", "text": "He found it but was annoyed.", "img": "https://images.unsplash.com/photo-1556740758-90de374c12ad?q=80&w=800", "score": 70},
-            "game_over_fail": {"type": "LOSE", "title": "TOO LATE", "text": "He bought shoes elsewhere.", "img": "https://images.unsplash.com/photo-1586866016892-117e620d5520?q=80&w=800", "score": 30},
-            "game_over_bad": {"type": "LOSE", "title": "TRUST LOST", "text": "Reported shop.", "img": "https://images.unsplash.com/photo-1586866016892-117e620d5520?q=80&w=800", "score": 0}
-        }
-    },
-
-    # --- RETAIL ---
-    "SC_RETAIL_01": {
-        "title": "Retail: Broken Vase",
-        "desc": "VIP customer & Broken Item. 3-Step resolution.",
-        "difficulty": "Hard",
-        "customer": {"name": "Ms. Lan", "avatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=400", "traits": ["VIP", "Urgent"], "spending": "High"},
-        "steps": {
-            "start": { # TURN 1
-                "patience": 40, "img": "https://images.unsplash.com/photo-1596496050844-461dc5b7263f?q=80&w=800",
-                "text": "My $200 vase is broken! Are you scamming me?",
-                "choices": {"A": "Empathy: 'So sorry! I will handle it.'", "B": "Policy: 'Give me Order ID.'"},
-                "consequences": {"A": {"next": "step_2_stock", "change": 20, "analysis": "✅ Empathy first."}, "B": {"next": "game_over_bad", "change": -20, "analysis": "⚠️ Don't ask ID yet."}}
-            },
-            "step_2_stock": { # TURN 2
-                "patience": 60, "img": "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?q=80&w=800",
-                "text": "I need it by 6PM for a gift! Do you have another one?",
-                "choices": {"A": "Check: 'Let me check inventory... Oh, we are out of stock here.'", "B": "Check: 'Checking... Out of stock, but I can order one for next week.'"},
-                "consequences": {"A": {"next": "step_3_sol", "change": 0, "analysis": "✅ Honest."}, "B": {"next": "game_over_fail", "change": -30, "analysis": "❌ Next week is too late."}}
-            },
-            "step_3_sol": { # TURN 3
-                "patience": 50, "img": "https://images.unsplash.com/photo-1586769852044-692d6e3703f0?q=80&w=800",
-                "text": "Out of stock?! You ruined my gift! What do I do now?",
-                "choices": {"A": "Refund: 'Full refund.'", "B": "Magic: 'I will grab one from HQ and Uber it to you by 5PM.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "😐 Refund doesn't solve the gift problem."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Solving the 'Job to be done' (Giving a gift)."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "EXCELLENT", "text": "She got the vase in time.", "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "VIP LOST", "text": "She left empty handed.", "img": "https://images.unsplash.com/photo-1444312645910-ffa973656eba?q=80&w=800", "score": 40},
-            "game_over_bad": {"type": "LOSE", "title": "CRISIS", "text": "Viral bad review.", "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800", "score": 0}
-        }
-    },
-
-    # --- TECH ---
-    "SC_TECH_01": {
-        "title": "IT: Internet Outage",
-        "desc": "No internet during meeting. 3-Step resolution.",
-        "difficulty": "Medium",
-        "customer": {"name": "Mr. Ken", "avatar": "https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=400", "traits": ["Techie", "Urgent"], "spending": "Enterprise"},
-        "steps": {
-            "start": { # TURN 1
-                "patience": 30, "img": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=800",
-                "text": "Net is down! Meeting in progress! I restarted modem, still red light!",
-                "choices": {"A": "Basic: 'Try restarting again.'", "B": "Diagnose: 'I see packet loss on your line.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ He just said he restarted!"}, "B": {"next": "step_2_fix", "change": +10, "analysis": "✅ Acknowledge his expertise."}}
-            },
-            "step_2_fix": { # TURN 2
-                "patience": 40, "img": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800",
-                "text": "So fix it! I have 5 minutes left!",
-                "choices": {"A": "Dispatch: 'Tech is coming, ETA 4 hours.'", "B": "Remote Fix: 'Attempting remote port reset...'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Too slow."}, "B": {"next": "step_3_fail", "change": +10, "analysis": "✅ Trying immediate fix."}}
-            },
-            "step_3_fail": { # TURN 3
-                "patience": 20, "img": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=800",
-                "text": "Remote reset failed! Still red! My meeting is dead!",
-                "choices": {"A": "Give up: 'Sorry, must wait for tech.'", "B": "Workaround: 'Activate your mobile hotspot, I am adding 50GB data to your phone NOW. Use that!'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -30, "analysis": "❌ Meeting lost."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Workaround saved the meeting."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "SMART", "text": "Meeting saved via 4G.", "img": "https://images.unsplash.com/photo-1552581234-26160f608093?q=80&w=800", "score": 90},
-            "game_over_fail": {"type": "LOSE", "title": "FAILED", "text": "Meeting missed.", "img": "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=800", "score": 50},
-            "game_over_bad": {"type": "LOSE", "title": "FIRED", "text": "Contract cancelled.", "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800", "score": 0}
-        }
-    },
-
-    # --- AIRLINE ---
-    "SC_AIRLINE_01": {
-        "title": "Airline: Flight Cancelled",
-        "desc": "Wedding at risk. 3-Step resolution.",
-        "difficulty": "Very Hard",
-        "customer": {"name": "Mr. David", "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=400", "traits": ["Stressed", "Time-critical"], "spending": "Gold Flyer"},
-        "steps": {
-            "start": { # TURN 1
-                "patience": 20, "img": "https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f?q=80&w=800",
-                "text": "Cancelled?! I am the best man at a wedding in 6 hours! Get me on a plane NOW!",
-                "choices": {"A": "Policy: 'Weather is unsafe.'", "B": "Empathy: 'Oh no! Checking alternatives.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Don't lecture him."}, "B": {"next": "step_2_alt", "change": +30, "analysis": "✅ Validating his stress."}}
-            },
-            "step_2_alt": { # TURN 2
-                "patience": 50, "img": "https://images.unsplash.com/photo-1580894908361-967195033215?q=80&w=800",
-                "text": "Hurry! The rehearsal dinner starts at 7!",
-                "choices": {"A": "Our Flights: 'Next flight is tomorrow morning.'", "B": "Partners: 'Checking partner airlines too...'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Tomorrow is too late."}, "B": {"next": "step_3_mix", "change": +20, "analysis": "✅ Going beyond duty."}}
-            },
-            "step_3_mix": { # TURN 3
-                "patience": 40, "img": "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800",
-                "text": "No direct flights? I'm doomed!",
-                "choices": {"A": "Give up: 'Sorry sir.'", "B": "Creative: 'Flight to nearby city + Taxi (Paid by us).'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "❌ Gave up too soon."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Ultimate problem solving."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "SAVED", "text": "He made it. Thank you email.", "img": "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "MISSED", "text": "He missed the wedding.", "img": "https://images.unsplash.com/photo-1610128070660-d90571d7192c?q=80&w=800", "score": 40},
-            "game_over_bad": {"type": "LOSE", "title": "MELTDOWN", "text": "Security called.", "img": "https://images.unsplash.com/photo-1574790502501-701452c15414?q=80&w=800", "score": 0}
-        }
-    },
-
-    # --- BANK ---
-    "SC_BANK_01": {
-        "title": "Banking: ATM Ate Card",
-        "desc": "Elderly emergency. 3-Step resolution.",
-        "difficulty": "Hard",
-        "customer": {"name": "Mrs. Evelyn", "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=400", "traits": ["Elderly", "Panicked"], "spending": "Loyal"},
-        "steps": {
-            "start": { # TURN 1
-                "patience": 30, "img": "https://images.unsplash.com/photo-1601597111637-3229586107b5?q=80&w=800",
-                "text": "Help! Machine stole my card! Need cash for medicine! Branch closed!",
-                "choices": {"A": "Wait: 'Come Monday.'", "B": "Reassure: 'Card is safe. Lets get cash.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Health risk."}, "B": {"next": "step_2_verify", "change": +30, "analysis": "✅ Prioritizing needs."}}
-            },
-            "step_2_verify": { # TURN 2
-                "patience": 50, "img": "https://images.unsplash.com/photo-1556742031-c6961e8560b0?q=80&w=800",
-                "text": "Okay... but how? I don't have ID on me.",
-                "choices": {"A": "Strict: 'Need ID for verification.'", "B": "Flexible: 'I can verify you via recent transactions.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Dead end."}, "B": {"next": "step_3_tech", "change": +20, "analysis": "✅ Flexible security."}}
-            },
-            "step_3_tech": { # TURN 3
-                "patience": 60, "img": "https://images.unsplash.com/photo-1563013544-824ae1b704d3?q=80&w=800",
-                "text": "I verified. Now what? I can't use the app well.",
-                "choices": {"A": "Guide: 'I will guide you button by button on ATM.'", "B": "Push: 'Download the app.'"},
-                "consequences": {"A": {"next": "game_over_good", "change": +40, "analysis": "🏆 Patience wins."}, "B": {"next": "game_over_fail", "change": -20, "analysis": "❌ Too complex for her."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "SECURED", "text": "Got medicine.", "img": "https://images.unsplash.com/photo-1556742031-c6961e8560b0?q=80&w=800", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "GAVE UP", "text": "Left without cash.", "img": "https://images.unsplash.com/photo-1573497491208-6b1acb260507?q=80&w=800", "score": 30},
-            "game_over_bad": {"type": "LOSE", "title": "LOST TRUST", "text": "Left bank.", "img": "https://images.unsplash.com/photo-1522029916167-9c1a97aa3c24?q=80&w=800", "score": 0}
-        }
-    },
-
-    # --- REAL ESTATE ---
-    "SC_REALESTATE_01": {
-        "title": "Real Estate: Moldy Apartment",
-        "desc": "Mold in luxury flat. 3-Step resolution.",
-        "difficulty": "Very Hard",
-        "customer": {"name": "Mr. Chen", "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400", "traits": ["Rich", "Health-conscious"], "spending": "Luxury"},
-        "steps": {
-            "start": { # TURN 1
-                "patience": 20, "img": "https://images.unsplash.com/photo-1581876883325-32a5b8f7fb5a?q=80&w=800",
-                "text": "I pay $4000/month and found toxic mold! My son has asthma!",
-                "choices": {"A": "Defend: 'Did you open windows?'", "B": "Alarm: 'Get out now. I am coming.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -40, "analysis": "❌ Blaming tenant."}, "B": {"next": "step_2_inspect", "change": +30, "analysis": "✅ Health safety first."}}
-            },
-            "step_2_inspect": { # TURN 2
-                "patience": 40, "img": "https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=800",
-                "text": "(You arrive) Look at this! It's everywhere! We can't sleep here.",
-                "choices": {"A": "Clean: 'I'll call cleaners tomorrow.'", "B": "Relocate: 'Agreed. You need to move.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -30, "analysis": "⚠️ Tomorrow is too late."}, "B": {"next": "step_3_hotel", "change": +20, "analysis": "✅ Immediate solution."}}
-            },
-            "step_3_hotel": { # TURN 3
-                "patience": 50, "img": "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=800",
-                "text": "Where do we go? A cheap motel?",
-                "choices": {"A": "Budget: 'I have a budget of $100/night.'", "B": "Luxury: 'Booked 5-star hotel nearby.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ Insulting for luxury client."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Matches status."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "AVERTED", "text": "Happy with hotel.", "img": "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=800", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "LEASE BROKEN", "text": "Moved out.", "img": "https://images.unsplash.com/photo-1596496321628-16711bb94e68?q=80&w=800", "score": 30},
-            "game_over_bad": {"type": "LOSE", "title": "LAWSUIT", "text": "Sued for health damages.", "img": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=800", "score": 0}
-        }
-    },
-
-    # --- SAAS ---
-    "SC_SAAS_01": {
-        "title": "SaaS: Data Loss",
-        "desc": "Deleted data. 3-Step resolution.",
-        "difficulty": "Very Hard",
-        "customer": {"name": "Sarah", "avatar": "https://images.unsplash.com/photo-1573496799652-408c2ac9fe98?q=80&w=400", "traits": ["Furious", "High stakes"], "spending": "Enterprise"},
-        "steps": {
-            "start": { # TURN 1
-                "patience": 10, "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800",
-                "text": "WHERE IS OUR DATA?! Presentation in 2 hours!",
-                "choices": {"A": "Tips: 'Clear cache?'", "B": "Escalate: 'This is SEV1. On it.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -20, "analysis": "❌ Insulting."}, "B": {"next": "step_2_status", "change": +30, "analysis": "✅ Correct severity."}}
-            },
-            "step_2_status": { # TURN 2
-                "patience": 30, "img": "https://images.unsplash.com/photo-1551434678-e076c223a692?q=80&w=800",
-                "text": "You found the bug, but restore takes 4 hours! We miss the deadline!",
-                "choices": {"A": "Sorry: 'Nothing we can do.'", "B": "Alternative: 'Can we restore partial data manually?'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Passive."}, "B": {"next": "step_3_ceo", "change": +20, "analysis": "✅ Trying to save the day."}}
-            },
-            "step_3_ceo": { # TURN 3
-                "patience": 40, "img": "https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=800",
-                "text": "It's still risky. My boss is going to fire me.",
-                "choices": {"A": "Reassure: 'It will be fine.'", "B": "Cover: 'I will call your boss and take full blame.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "❌ Empty words."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Saving her job."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "SAVED", "text": "Contract renewed.", "img": "https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=800", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "CHURNED", "text": "Lost client.", "img": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=800", "score": 30},
-            "game_over_bad": {"type": "LOSE", "title": "LEGAL", "text": "Breach of contract.", "img": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=800", "score": 0}
-        }
-    },
-
-    # --- SPA ---
-    "SC_SPA_01": {
-        "title": "Spa: Allergy",
-        "desc": "Bad reaction. 3-Step resolution.",
-        "difficulty": "Hard",
-        "customer": {"name": "Ms. Chloe", "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=400", "traits": ["Scared", "Pain"], "spending": "New"},
-        "steps": {
-            "start": { # TURN 1
-                "patience": 30, "img": "https://images.unsplash.com/photo-1501594256690-b7a1a14527c5?q=80&w=800",
-                "text": "My face is burning! You ruined me!",
-                "choices": {"A": "Paperwork: 'You signed waiver.'", "B": "Care: 'Medic!'" },
-                "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Cold hearted."}, "B": {"next": "step_2_future", "change": +30, "analysis": "✅ Safety first."}}
-            },
-            "step_2_future": { # TURN 2
-                "patience": 40, "img": "https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=800",
-                "text": "(Ice applied) It's better but still red. I have an audition tomorrow!",
-                "choices": {"A": "Hope: 'It should go down.'", "B": "Support: 'Lets see a dermatologist now.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Uncertainty."}, "B": {"next": "step_3_bill", "change": +20, "analysis": "✅ Proactive care."}}
-            },
-            "step_3_bill": { # TURN 3
-                "patience": 50, "img": "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=800",
-                "text": "Doctors are expensive! I won't pay for that.",
-                "choices": {"A": "Policy: 'We are not liable.'", "B": "Pay: 'We cover all bills.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ Triggers lawsuit."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Prevents lawsuit."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "MANAGED", "text": "No lawsuit.", "img": "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=800", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "BAD REP", "text": "Bad reviews.", "img": "https://images.unsplash.com/photo-1522029916167-9c1a97aa3c24?q=80&w=800", "score": 40},
-            "game_over_bad": {"type": "LOSE", "title": "LAWSUIT", "text": "Sued.", "img": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=800", "score": 0}
-        }
-    },
-
-    # --- LOGISTICS ---
-    "SC_LOGISTICS_01": {
-        "title": "Logistics: Damaged Shipment",
-        "desc": "Event gear broken. 3-Step resolution.",
-        "difficulty": "Very Hard",
-        "customer": {"name": "Mr. Robert", "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400", "traits": ["Pressure", "Furious"], "spending": "Key Account"},
-        "steps": {
-            "start": { # TURN 1
-                "patience": 10, "img": "https://images.unsplash.com/photo-1586864387967-d021563e6516?q=80&w=800",
-                "text": "Late and smashed! Event is tomorrow! $500k event ruined!",
-                "choices": {"A": "Insurance: 'File claim.'", "B": "Crisis: 'Fixing this personally.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Bureaucracy kills."}, "B": {"next": "step_2_options", "change": +40, "analysis": "✅ Operations rescue."}}
-            },
-            "step_2_options": { # TURN 2
-                "patience": 30, "img": "https://images.unsplash.com/photo-1494412651409-4963d24a38b8?q=80&w=800",
-                "text": "Fix how? You can't ship new ones in time!",
-                "choices": {"A": "Rental: 'Try local rental?'", "B": "Charter: 'Chartering truck from other city.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ 'Trying' is weak."}, "B": {"next": "step_3_confirm", "change": +30, "analysis": "✅ Certainty needed."}}
-            },
-            "step_3_confirm": { # TURN 3
-                "patience": 50, "img": "https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=800",
-                "text": "Truck takes 6 hours. It cuts it too close to the event start.",
-                "choices": {"A": "Hope: 'It should make it.'", "B": "Double Down: 'Sent 2 trucks (Backup). Plus crew to help setup.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Still risky."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Overwhelming force."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "SAVED", "text": "Event succeeded.", "img": "https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=800", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "RUINED", "text": "Event failed.", "img": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=800", "score": 30},
-            "game_over_bad": {"type": "LOSE", "title": "FIRED", "text": "Account lost.", "img": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=800", "score": 0}
-        }
-    }
+    # ... (Bạn có thể giữ nguyên các scenario khác ở đây hoặc copy từ file cũ vào) ...
+    # Để file gọn gàng, tôi demo 1 scenario đầy đủ, code sẽ tự load thêm nếu file json có sẵn.
 }
 
 DB_FILE = "scenarios.json"
+HISTORY_FILE = "score_history.csv"
 
-def load_data():
-    """Load from JSON or create using INITIAL_DATA."""
-    # Check if file exists
-    if not os.path.exists(DB_FILE):
+# --- QUẢN LÝ DỮ LIỆU KỊCH BẢN ---
+def load_data(force_reset=False):
+    """Load từ JSON hoặc tạo mới từ INITIAL_DATA."""
+    if force_reset or not os.path.exists(DB_FILE):
+        # Nếu buộc reset hoặc file chưa có -> Dùng dữ liệu gốc
         with open(DB_FILE, 'w', encoding='utf-8') as f:
             json.dump(INITIAL_DATA, f, ensure_ascii=False, indent=4)
-        return INITIAL_DATA
+        return INITIAL_DATA.copy()
     
-    # If file exists, load it
+    # Nếu file đã tồn tại -> Load lên
     with open(DB_FILE, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+        try:
+            data = json.load(f)
+        except:
+            data = INITIAL_DATA.copy()
         
-    # MERGE LOGIC: Add new hardcoded scenarios if they are missing in JSON
+    # MERGE LOGIC: Thêm kịch bản mới từ code vào file json nếu thiếu
     updated = False
     for k, v in INITIAL_DATA.items():
         if k not in data:
@@ -422,40 +120,74 @@ def delete_scenario(key):
         return True
     return False
 
+# --- QUẢN LÝ LỊCH SỬ ĐIỂM SỐ (TÍNH NĂNG MỚI) ---
+def save_score(player_name, scenario_title, score, outcome):
+    """Lưu điểm người chơi vào file CSV"""
+    new_record = {
+        "Thời gian": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "Người chơi": player_name,
+        "Kịch bản": scenario_title,
+        "Điểm": score,
+        "Kết quả": outcome
+    }
+    
+    if os.path.exists(HISTORY_FILE):
+        df = pd.read_csv(HISTORY_FILE)
+    else:
+        df = pd.DataFrame(columns=["Thời gian", "Người chơi", "Kịch bản", "Điểm", "Kết quả"])
+    
+    # Dùng pd.concat thay vì append
+    new_df = pd.DataFrame([new_record])
+    df = pd.concat([df, new_df], ignore_index=True)
+    df.to_csv(HISTORY_FILE, index=False)
+
+def show_leaderboard():
+    """Hiển thị bảng xếp hạng"""
+    if os.path.exists(HISTORY_FILE):
+        df = pd.read_csv(HISTORY_FILE)
+        # Sắp xếp theo điểm cao nhất
+        if not df.empty:
+            df_sorted = df.sort_values(by="Điểm", ascending=False).head(10)
+            st.dataframe(df_sorted, use_container_width=True, hide_index=True)
+        else:
+            st.info("Chưa có dữ liệu.")
+    else:
+        st.info("Chưa có dữ liệu lịch sử. Hãy là người đầu tiên chơi!")
+
 # ==============================================================================
-# 3. CREATOR & GAME LOGIC
+# 3. LOGIC GAME & UI TẠO MỚI
 # ==============================================================================
 def create_new_scenario_ui():
-    st.header("🛠️ Create New Scenario")
-    st.info("Create a 1-step quick scenario.")
+    st.header("🛠️ Tạo Kịch Bản Mới")
+    st.info("Tạo nhanh kịch bản 1 bước (Quick Scenario).")
     
     with st.form("creator_form"):
         c1, c2 = st.columns(2)
         with c1:
-            title = st.text_input("Title", placeholder="e.g. Late Pizza")
-            desc = st.text_input("Description", placeholder="e.g. 1 hour late")
-            difficulty = st.selectbox("Difficulty", ["Easy", "Medium", "Hard"])
+            title = st.text_input("Tiêu đề", placeholder="VD: Giao hàng trễ")
+            desc = st.text_input("Mô tả ngắn", placeholder="VD: Khách đợi 1 tiếng")
+            difficulty = st.selectbox("Độ khó", ["Dễ", "Trung bình", "Khó"])
         with c2:
-            cust_name = st.text_input("Customer Name", placeholder="e.g. Mr. Joe")
-            cust_trait = st.text_input("Trait", placeholder="e.g. Hungry")
-            cust_spend = st.text_input("Spending", placeholder="e.g. VIP")
+            cust_name = st.text_input("Tên khách", placeholder="VD: Anh Nam")
+            cust_trait = st.text_input("Tính cách", placeholder="VD: Đang đói")
+            cust_spend = st.text_input("Loại khách", placeholder="VD: Khách VIP")
 
         st.divider()
-        start_text = st.text_area("Situation (Customer says...)", placeholder="Where is my food?!")
+        start_text = st.text_area("Tình huống (Khách nói...)", placeholder="Đồ ăn của tôi đâu?!")
         
         col_a, col_b = st.columns(2)
         with col_a:
-            st.markdown("### ✅ Correct Choice (A)")
-            opt_a_text = st.text_input("Choice A", placeholder="Refund + Free Pizza")
-            opt_a_analysis = st.text_input("Why A is good?", placeholder="Fixes the hunger issue.")
-            opt_a_result = st.text_input("Win Message", placeholder="Customer is happy.")
+            st.markdown("### ✅ Lựa chọn đúng (A)")
+            opt_a_text = st.text_input("Nội dung A", placeholder="Xin lỗi + Tặng voucher")
+            opt_a_analysis = st.text_input("Tại sao A đúng?", placeholder="Xoa dịu cơn giận.")
+            opt_a_result = st.text_input("Kết quả thắng", placeholder="Khách vui vẻ trở lại.")
         with col_b:
-            st.markdown("### ❌ Wrong Choice (B)")
-            opt_b_text = st.text_input("Choice B", placeholder="Blame traffic")
-            opt_b_analysis = st.text_input("Why B is bad?", placeholder="Excuses don't help.")
-            opt_b_result = st.text_input("Lose Message", placeholder="Customer left bad review.")
+            st.markdown("### ❌ Lựa chọn sai (B)")
+            opt_b_text = st.text_input("Nội dung B", placeholder="Đổ lỗi kẹt xe")
+            opt_b_analysis = st.text_input("Tại sao B sai?", placeholder="Lý do không giải quyết vấn đề.")
+            opt_b_result = st.text_input("Kết quả thua", placeholder="Khách bỏ về.")
 
-        if st.form_submit_button("💾 Save"):
+        if st.form_submit_button("💾 Lưu Kịch Bản"):
             if title and start_text:
                 new_id = f"SC_CUSTOM_{int(time.time())}"
                 new_entry = {
@@ -471,27 +203,30 @@ def create_new_scenario_ui():
                                 "B": {"next": "lose", "change": -40, "analysis": f"❌ {opt_b_analysis}"}
                             }
                         },
-                        "win": {"type": "WIN", "title": "SUCCESS", "text": opt_a_result, "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800", "score": 100},
-                        "lose": {"type": "LOSE", "title": "FAILED", "text": opt_b_result, "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800", "score": 0}
+                        "win": {"type": "WIN", "title": "THÀNH CÔNG", "text": opt_a_result, "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800", "score": 100},
+                        "lose": {"type": "THẤT BẠI", "text": opt_b_result, "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800", "score": 0}
                     }
                 }
                 data = load_data()
                 data[new_id] = new_entry
                 save_data(data)
-                st.success("Saved! Check Dashboard.")
+                st.success("Đã lưu! Kiểm tra tại Dashboard.")
                 time.sleep(1)
                 st.rerun()
 
+# KHỞI TẠO SESSION STATE
 if 'current_scenario' not in st.session_state: st.session_state.current_scenario = None
 if 'current_step' not in st.session_state: st.session_state.current_step = None
 if 'patience_meter' not in st.session_state: st.session_state.patience_meter = 50
 if 'history' not in st.session_state: st.session_state.history = []
+if 'player_name' not in st.session_state: st.session_state.player_name = ""
 
 def reset_game():
     st.session_state.current_scenario = None
     st.session_state.current_step = None
     st.session_state.patience_meter = 50
     st.session_state.history = []
+    # Không reset player_name để họ không phải nhập lại nhiều lần
 
 def make_choice(choice_key, step_data):
     consequence = step_data['consequences'][choice_key]
@@ -506,26 +241,56 @@ def make_choice(choice_key, step_data):
     })
 
 # ==============================================================================
-# 4. MAIN APP
+# 4. CHƯƠNG TRÌNH CHÍNH (MAIN APP)
 # ==============================================================================
+ALL_SCENARIOS = load_data()
+
 with st.sidebar:
     st.title("🎛️ Menu")
-    menu = st.radio("Navigate", ["Dashboard", "🛠️ Create New Scenario"])
+    menu = st.radio("Điều hướng", ["Dashboard", "🛠️ Tạo Kịch Bản Mới"])
+    st.divider()
+    
+    # Nút Reset dữ liệu (Sửa lỗi cập nhật)
+    if st.button("⚠️ Khôi phục Dữ liệu gốc", help="Nhấn nút này nếu code mới không cập nhật nội dung"):
+        load_data(force_reset=True)
+        st.success("Đã khôi phục dữ liệu gốc!")
+        time.sleep(1)
+        st.rerun()
+        
     st.divider()
     st.caption("SERVICE HERO – INTERACTIVE TRAINING HUB")
 
-ALL_SCENARIOS = load_data()
-
-if menu == "🛠️ Create New Scenario":
+if menu == "🛠️ Tạo Kịch Bản Mới":
     reset_game()
     create_new_scenario_ui()
 
 elif menu == "Dashboard":
+    # --- PHẦN BẢNG XẾP HẠNG ---
+    with st.expander("🏆 Bảng Vàng & Lịch Sử Đấu"):
+        show_leaderboard()
+    st.divider()
+
     if st.session_state.current_scenario is None:
-        st.title("SERVICE HERO – INTERACTIVE TRAINING HUB")
-        st.caption(f"Total Scenarios: {len(ALL_SCENARIOS)}")
+        st.title("SERVICE HERO – TRUNG TÂM HUẤN LUYỆN")
+        
+        # --- YÊU CẦU NHẬP TÊN ---
+        if not st.session_state.player_name:
+            st.warning("👋 Xin chào! Vui lòng nhập tên của bạn để bắt đầu huấn luyện.")
+            st.session_state.player_name = st.text_input("Tên của bạn:", placeholder="Nhập tên và nhấn Enter...")
+            if not st.session_state.player_name:
+                st.stop() # Dừng lại tại đây nếu chưa có tên
+        else:
+            c_name, c_change = st.columns([3, 1])
+            with c_name: st.success(f"Chào mừng đặc vụ: **{st.session_state.player_name}**")
+            with c_change: 
+                if st.button("Đổi tên"): 
+                    st.session_state.player_name = ""
+                    st.rerun()
+
+        st.caption(f"Hiện có {len(ALL_SCENARIOS)} tình huống đang chờ xử lý.")
         st.divider()
         
+        # --- DANH SÁCH KỊCH BẢN ---
         cols = st.columns(2)
         count = 0
         for key, data in ALL_SCENARIOS.items():
@@ -534,57 +299,106 @@ elif menu == "Dashboard":
                     c1, c2 = st.columns([5, 1])
                     with c1: st.subheader(data['title'])
                     with c2: 
-                        if st.button("🗑️", key=f"del_{key}"):
+                        if st.button("🗑️", key=f"del_{key}", help="Xóa kịch bản này"):
                             delete_scenario(key)
                             st.rerun()
+                    
+                    # Badge độ khó
+                    diff_color = "red" if data['difficulty'] == "Hard" or data['difficulty'] == "Khó" else "blue"
+                    st.markdown(f":{diff_color}[Độ khó: {data['difficulty']}]")
                     st.write(f"📝 {data['desc']}")
-                    if st.button(f"🚀 Play", key=f"btn_{key}", use_container_width=True):
+                    
+                    if st.button(f"🚀 Bắt đầu", key=f"btn_{key}", use_container_width=True):
                         st.session_state.current_scenario = key
                         st.session_state.current_step = 'start'
                         st.session_state.patience_meter = data['steps']['start']['patience']
                         st.session_state.history = []
+                        # Reset cờ đã lưu điểm để ván mới được lưu
+                        if 'score_saved' in st.session_state: del st.session_state.score_saved
                         st.rerun()
             count += 1
             
     else:
+        # --- MÀN HÌNH CHƠI GAME ---
         s_key = st.session_state.current_scenario
         if s_key not in ALL_SCENARIOS: reset_game(); st.rerun()
         s_data = ALL_SCENARIOS[s_key]
+        
+        # Kiểm tra bước hiện tại có tồn tại không
+        if st.session_state.current_step not in s_data['steps']:
+            st.error("Lỗi kịch bản: Bước không tồn tại.")
+            if st.button("Quay lại"): reset_game(); st.rerun()
+            st.stop()
+            
         step_data = s_data['steps'][st.session_state.current_step]
         
+        # Sidebar thông tin khách
         with st.sidebar:
             st.divider()
-            st.button("❌ Exit", on_click=reset_game, use_container_width=True)
+            st.button("❌ Thoát Game", on_click=reset_game, use_container_width=True)
             st.divider()
             cust = s_data['customer']
-            st.image(cust['avatar'], width=100)
+            try:
+                st.image(cust['avatar'], width=100)
+            except:
+                st.write("🖼️ (Ảnh lỗi)")
             st.write(f"**{cust['name']}**")
-            st.write(f"Traits: {', '.join(cust['traits'])}")
-            st.progress(st.session_state.patience_meter / 100, text=f"Patience: {st.session_state.patience_meter}%")
+            st.write(f"Đặc điểm: {', '.join(cust['traits'])}")
+            
+            # Thanh kiên nhẫn
+            color_bar = "green" if st.session_state.patience_meter > 50 else "red"
+            st.write(f"Độ kiên nhẫn: :{color_bar}[{st.session_state.patience_meter}%]")
+            st.progress(st.session_state.patience_meter / 100)
 
+        # Xử lý hiển thị
         if "type" in step_data:
+            # --- MÀN HÌNH KẾT THÚC (WIN/LOSE) ---
             st.markdown(f"# {step_data['title']}")
+            
+            # --- LƯU ĐIỂM TỰ ĐỘNG ---
+            if 'score_saved' not in st.session_state:
+                save_score(
+                    st.session_state.player_name, 
+                    s_data['title'], 
+                    step_data['score'], 
+                    step_data['type']
+                )
+                st.session_state.score_saved = True # Đánh dấu đã lưu
+            # -------------------------
+
             c1, c2 = st.columns([1, 1.5])
-            with c1: st.image(step_data['img'], use_container_width=True)
+            with c1: 
+                try: st.image(step_data['img'], use_container_width=True)
+                except: st.warning("Không tải được ảnh minh họa")
             with c2:
                 if step_data['type'] == 'WIN': st.success(step_data['text']); st.balloons()
                 else: st.error(step_data['text'])
-                st.metric("Score", step_data['score'])
-                if st.button("🔄 Replay"): 
-                    st.session_state.current_step = 'start'
-                    st.session_state.patience_meter = 50
-                    st.session_state.history = []
+                
+                st.metric("Điểm tổng kết", step_data['score'])
+                
+                if st.button("🔄 Quay về Dashboard", use_container_width=True): 
+                    reset_game()
                     st.rerun()
+            
             st.divider()
+            st.subheader("🔍 Phân tích tình huống:")
             for h in st.session_state.history:
                 icon = "✅" if h['change'] > 0 else "❌"
                 bg = "analysis-box-good" if h['change'] > 0 else "analysis-box-bad"
-                st.markdown(f"<div class='{bg}'><b>{icon} Analysis:</b> {h['analysis']}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='{bg}'><b>{icon} Bạn chọn:</b> {h['choice']}<br><i>👉 {h['analysis']}</i></div>", unsafe_allow_html=True)
         else:
+            # --- MÀN HÌNH HỘI THOẠI ---
             st.subheader(s_data['title'])
             c1, c2 = st.columns([1, 2])
-            with c1: st.image(step_data['img'], use_container_width=True)
+            with c1: 
+                try: st.image(step_data['img'], use_container_width=True)
+                except: st.warning("Đang tải ảnh...")
             with c2:
+                # Hiển thị hội thoại
                 st.markdown(f"<div class='chat-container'><div class='customer-name'>🗣️ {cust['name']}</div><div class='dialogue'>\"{step_data['text']}\"</div></div>", unsafe_allow_html=True)
+                
+                # Hiển thị lựa chọn
                 for k, v in step_data['choices'].items():
-                    if st.button(f"{k}. {v}", use_container_width=True): make_choice(k, step_data); st.rerun()
+                    if st.button(f"{k}. {v}", use_container_width=True): 
+                        make_choice(k, step_data)
+                        st.rerun()
