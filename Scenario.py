@@ -2,12 +2,18 @@ import streamlit as st
 import json
 import os
 import time
-import pandas as pd
 from datetime import datetime
-import matplotlib.pyplot as plt
+
+# --- KHỐI XỬ LÝ LỖI IMPORT THƯ VIỆN ---
+try:
+    import pandas as pd
+    import matplotlib.pyplot as plt
+except ImportError as e:
+    st.error(f"❌ Lỗi: Thiếu thư viện cần thiết. Vui lòng chạy lệnh sau trong terminal:\n\n`pip install pandas matplotlib`")
+    st.stop()
 
 # ==============================================================================
-# 1. CẤU HÌNH & GIAO DIỆN (CONFIGURATION & UI)
+# 1. CẤU HÌNH & HÀM HỖ TRỢ (CORE UTILS)
 # ==============================================================================
 st.set_page_config(
     page_title="Service Hero Pro",
@@ -15,7 +21,14 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS cho giao diện đẹp hơn
+# Hàm Rerun tương thích mọi phiên bản Streamlit
+def safe_rerun():
+    try:
+        st.rerun()
+    except AttributeError:
+        st.experimental_rerun()
+
+# CSS Custom
 st.markdown("""
 <style>
     .stButton button {
@@ -30,35 +43,33 @@ st.markdown("""
         border-left: 8px solid #2E86C1; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px;
     }
     .certificate-box {
-        border: 5px double #D4AF37; padding: 20px; text-align: center;
-        background: #FFF8DC; color: #5D4037; border-radius: 10px; margin-top: 20px;
-    }
-    .metric-card {
-        background-color: #f0f2f6; padding: 15px; border-radius: 10px; text-align: center;
+        border: 5px double #D4AF37; padding: 30px; text-align: center;
+        background: #FFF8DC; color: #5D4037; border-radius: 15px; margin-top: 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. DỮ LIỆU & HÀM HỖ TRỢ
+# 2. DỮ LIỆU MẪU (INITIAL DATA)
 # ==============================================================================
 INITIAL_DATA = {
     "SC_FNB_01": {
         "title": "F&B: Dị vật trong món ăn",
-        "desc": "Tóc trong súp. Giải quyết trong 3 bước.",
+        "desc": "Khách phát hiện tóc trong súp.",
         "difficulty": "Hard",
         "customer": {"name": "Ms. Jade", "avatar": "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?q=80&w=400", "traits": ["Kỹ tính", "Reviewer"], "spending": "Khách mới"},
         "steps": {
             "start": { 
                 "patience": 30, "img": "https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?q=80&w=800",
-                "text": "Quản lý đâu! Nhìn xem! Một sợi tóc dài trong súp của tôi! Các người cho tôi ăn rác đấy à?",
+                "text": "Quản lý đâu! Nhìn xem! Một sợi tóc dài trong súp của tôi! Các người làm ăn kiểu gì vậy?",
                 "choices": {"A": "Phủ nhận: 'Không phải tóc nhân viên chúng tôi.'", "B": "Hành động: 'Tôi vô cùng xin lỗi! Tôi sẽ xử lý ngay.'"},
                 "consequences": {"A": {"next": "game_over_bad", "change": -40, "analysis": "❌ Phủ nhận làm mất niềm tin ngay lập tức."}, "B": {"next": "step_2_wait", "change": +10, "analysis": "✅ Hành động ngay lập tức là chính xác."}}
             },
             "step_2_wait": { 
                 "patience": 40, "img": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=800",
                 "text": "(5 phút sau) Tôi hết muốn ăn rồi. Đợi lâu quá tôi mất cả hứng.",
-                "choices": {"A": "Thuyết phục: 'Mời chị thử đi ạ, bếp trưởng làm riêng đấy.'", "B": "Chuyển hướng: 'Tôi hoàn toàn hiểu ạ. Tôi xin phép dọn món này đi. Tôi mời chị món tráng miệng nhé?'"},
+                "choices": {"A": "Thuyết phục: 'Mời chị thử đi ạ, bếp trưởng làm riêng đấy.'", "B": "Chuyển hướng: 'Tôi hiểu ạ. Tôi xin phép dọn món này đi. Tôi mời chị món tráng miệng nhé?'"},
                 "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Đừng ép khách ăn khi họ đang bực."}, "B": {"next": "step_3_bill", "change": +20, "analysis": "✅ Tôn trọng cảm xúc và đưa ra giải pháp thay thế."}}
             },
             "step_3_bill": { 
@@ -77,25 +88,38 @@ INITIAL_DATA = {
 DB_FILE = "scenarios.json"
 HISTORY_FILE = "score_history.csv"
 
+# ==============================================================================
+# 3. HÀM QUẢN LÝ DỮ LIỆU (DATA MANAGER)
+# ==============================================================================
 def load_data(force_reset=False):
+    """Tải dữ liệu an toàn với xử lý lỗi."""
     if force_reset or not os.path.exists(DB_FILE):
         with open(DB_FILE, 'w', encoding='utf-8') as f:
             json.dump(INITIAL_DATA, f, ensure_ascii=False, indent=4)
         return INITIAL_DATA.copy()
-    with open(DB_FILE, 'r', encoding='utf-8') as f:
-        try: data = json.load(f)
-        except: data = INITIAL_DATA.copy()
-    updated = False
-    for k, v in INITIAL_DATA.items():
-        if k not in data:
-            data[k] = v
-            updated = True
-    if updated: save_data(data)
-    return data
+    
+    try:
+        with open(DB_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            # Merge dữ liệu cũ nếu thiếu
+            updated = False
+            for k, v in INITIAL_DATA.items():
+                if k not in data:
+                    data[k] = v
+                    updated = True
+            if updated:
+                save_data(data)
+            return data
+    except Exception as e:
+        st.error(f"Lỗi đọc file dữ liệu: {e}. Đã reset về mặc định.")
+        return load_data(force_reset=True)
 
 def save_data(new_data):
-    with open(DB_FILE, 'w', encoding='utf-8') as f:
-        json.dump(new_data, f, ensure_ascii=False, indent=4)
+    try:
+        with open(DB_FILE, 'w', encoding='utf-8') as f:
+            json.dump(new_data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        st.error(f"Không thể lưu dữ liệu: {e}")
 
 def delete_scenario(key):
     data = load_data()
@@ -113,130 +137,129 @@ def save_score(player_name, scenario_title, score, outcome):
         "Score": score,
         "Outcome": outcome
     }
-    if os.path.exists(HISTORY_FILE):
-        df = pd.read_csv(HISTORY_FILE)
-    else:
-        df = pd.DataFrame(columns=["Time", "Player", "Scenario", "Score", "Outcome"])
-    new_df = pd.DataFrame([new_record])
-    df = pd.concat([df, new_df], ignore_index=True)
-    df.to_csv(HISTORY_FILE, index=False)
+    try:
+        if os.path.exists(HISTORY_FILE) and os.path.getsize(HISTORY_FILE) > 0:
+            df = pd.read_csv(HISTORY_FILE)
+        else:
+            df = pd.DataFrame(columns=["Time", "Player", "Scenario", "Score", "Outcome"])
+        
+        new_df = pd.DataFrame([new_record])
+        df = pd.concat([df, new_df], ignore_index=True)
+        df.to_csv(HISTORY_FILE, index=False)
+    except Exception as e:
+        st.warning(f"Không thể lưu điểm số: {e}")
 
 # ==============================================================================
-# 3. TÍNH NĂNG CAO CẤP: ADMIN & CERTIFICATE
+# 4. LOGIC TÍNH NĂNG (FEATURES)
 # ==============================================================================
 def render_certificate(player_name):
-    """Tạo chứng chỉ HTML đơn giản để hiển thị"""
+    st.balloons()
     cert_html = f"""
     <div class="certificate-box">
-        <h1>🎖️ CHỨNG NHẬN HOÀN THÀNH 🎖️</h1>
-        <p>Trao tặng cho đặc vụ xuất sắc:</p>
-        <h2>{player_name}</h2>
-        <p>Đã hoàn thành xuất sắc khóa huấn luyện Service Hero.</p>
+        <h1>🎖️ CHỨNG CHỈ HOÀN THÀNH 🎖️</h1>
+        <p>Chứng nhận đặc vụ xuất sắc:</p>
+        <h2 style="color:#2E86C1; text-transform:uppercase;">{player_name}</h2>
+        <p>Đã vượt qua khóa huấn luyện Service Hero với thành tích ấn tượng.</p>
+        <hr style="border-top: 1px dashed #8c8b8b; width: 50%; margin: auto;">
         <p><i>Ngày cấp: {datetime.now().strftime("%d/%m/%Y")}</i></p>
     </div>
     """
     st.markdown(cert_html, unsafe_allow_html=True)
-    st.balloons()
 
 def admin_dashboard():
-    """Trang quản trị viên cao cấp"""
     st.title("🔐 Admin Dashboard")
     
-    # Kiểm tra mật khẩu
-    password = st.text_input("Nhập mật khẩu quản trị:", type="password")
-    if password != "admin123": # Mật khẩu mặc định
-        st.warning("Vui lòng nhập mật khẩu để truy cập dữ liệu nhạy cảm.")
+    pwd = st.text_input("Mật khẩu quản trị", type="password")
+    if pwd != "admin123":
+        st.warning("Vui lòng nhập mật khẩu (Mặc định: admin123)")
         st.stop()
     
-    st.success("Đăng nhập thành công!")
-    
-    if not os.path.exists(HISTORY_FILE):
-        st.info("Chưa có dữ liệu lịch sử để phân tích.")
+    if not os.path.exists(HISTORY_FILE) or os.path.getsize(HISTORY_FILE) == 0:
+        st.info("Chưa có dữ liệu lịch sử.")
         return
 
-    df = pd.read_csv(HISTORY_FILE)
-    
-    # 1. Thống kê tổng quan (Metrics)
-    c1, c2, c3 = st.columns(3)
-    with c1: st.metric("Tổng lượt chơi", len(df))
-    with c2: st.metric("Điểm trung bình", f"{df['Score'].mean():.1f}")
-    with c3: st.metric("Tỷ lệ thắng", f"{(len(df[df['Outcome']=='WIN']) / len(df) * 100):.1f}%")
-    
-    st.divider()
-    
-    # 2. Biểu đồ phân tích (Charts)
-    col_chart1, col_chart2 = st.columns(2)
-    
-    with col_chart1:
-        st.subheader("📊 Điểm số theo Nhân viên")
-        # Nhóm theo nhân viên và tính điểm trung bình
-        avg_score = df.groupby("Player")["Score"].mean().sort_values()
-        st.bar_chart(avg_score, color="#2E86C1")
+    try:
+        df = pd.read_csv(HISTORY_FILE)
         
-    with col_chart2:
-        st.subheader("🥧 Tỷ lệ Thắng/Thua")
-        outcome_counts = df['Outcome'].value_counts()
-        # Vẽ biểu đồ tròn bằng matplotlib
-        fig, ax = plt.subplots()
-        ax.pie(outcome_counts, labels=outcome_counts.index, autopct='%1.1f%%', startangle=90, colors=['#2ecc71', '#e74c3c'])
-        ax.axis('equal') 
-        st.pyplot(fig)
+        # Metrics
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Tổng lượt chơi", len(df))
+        c2.metric("Điểm trung bình", f"{df['Score'].mean():.1f}")
+        
+        win_rate = 0
+        if len(df) > 0:
+            win_rate = (len(df[df['Outcome']=='WIN']) / len(df)) * 100
+        c3.metric("Tỷ lệ thắng", f"{win_rate:.1f}%")
+        
+        st.divider()
+        
+        # Charts
+        c_chart1, c_chart2 = st.columns(2)
+        with c_chart1:
+            st.subheader("📊 Điểm số nhân viên")
+            if not df.empty:
+                avg_score = df.groupby("Player")["Score"].mean().sort_values(ascending=False)
+                st.bar_chart(avg_score, color="#2E86C1")
+        
+        with c_chart2:
+            st.subheader("🥧 Tỷ lệ kết quả")
+            if not df.empty:
+                outcome_counts = df['Outcome'].value_counts()
+                fig, ax = plt.subplots()
+                ax.pie(outcome_counts, labels=outcome_counts.index, autopct='%1.1f%%', startangle=90, colors=['#2ecc71', '#e74c3c'])
+                ax.axis('equal')
+                st.pyplot(fig)
+                plt.close(fig) # Giải phóng bộ nhớ
 
-    st.divider()
-    
-    # 3. Dữ liệu chi tiết & Tải về
-    st.subheader("📂 Dữ liệu chi tiết")
-    st.dataframe(df, use_container_width=True)
-    
-    # Nút tải file CSV
-    with open(HISTORY_FILE, "rb") as file:
-        st.download_button(
-            label="📥 Tải xuống báo cáo (CSV)",
-            data=file,
-            file_name="service_hero_report.csv",
-            mime="text/csv"
-        )
+        st.divider()
+        st.subheader("📂 Dữ liệu chi tiết")
+        st.dataframe(df, use_container_width=True)
+        
+        # Download
+        with open(HISTORY_FILE, "rb") as f:
+            st.download_button("📥 Tải báo cáo (CSV)", f, "report.csv", "text/csv")
+            
+    except Exception as e:
+        st.error(f"Lỗi khi tải báo cáo: {e}")
 
 # ==============================================================================
-# 4. MAIN APP LOGIC
+# 5. UI TẠO KỊCH BẢN (CREATOR UI)
 # ==============================================================================
 def create_new_scenario_ui():
     st.header("🛠️ Tạo Kịch Bản Mới")
-    with st.form("creator_form"):
+    with st.form("creator"):
         c1, c2 = st.columns(2)
-        with c1:
-            title = st.text_input("Tiêu đề")
-            difficulty = st.selectbox("Độ khó", ["Dễ", "Trung bình", "Khó"])
-        with c2:
-            cust_name = st.text_input("Tên khách")
-            cust_trait = st.text_input("Tính cách")
+        title = c1.text_input("Tên tình huống")
+        diff = c1.selectbox("Độ khó", ["Dễ", "Trung bình", "Khó"])
+        cust_name = c2.text_input("Tên khách hàng")
+        cust_trait = c2.text_input("Tính cách")
         
         st.divider()
-        start_text = st.text_area("Tình huống mở đầu")
+        start_text = st.text_area("Câu thoại mở đầu của khách")
         
         c3, c4 = st.columns(2)
         with c3:
-            st.write("✅ **Phương án đúng (A)**")
+            st.write("✅ **Phương án ĐÚNG (A)**")
             opt_a = st.text_input("Nội dung A")
-            res_a = st.text_input("Kết quả thắng")
+            res_a = st.text_input("Kết quả thắng (A)")
         with c4:
-            st.write("❌ **Phương án sai (B)**")
+            st.write("❌ **Phương án SAI (B)**")
             opt_b = st.text_input("Nội dung B")
-            res_b = st.text_input("Kết quả thua")
+            res_b = st.text_input("Kết quả thua (B)")
             
-        if st.form_submit_button("Lưu kịch bản"):
+        if st.form_submit_button("Lưu Kịch Bản"):
             if title and start_text:
                 new_id = f"SC_{int(time.time())}"
                 new_entry = {
-                    "title": title, "desc": "Kịch bản tự tạo", "difficulty": difficulty,
+                    "title": title, "desc": "Kịch bản tự tạo", "difficulty": diff,
                     "customer": {"name": cust_name, "avatar": "", "traits": [cust_trait], "spending": "N/A"},
                     "steps": {
                         "start": {
                             "patience": 50, "img": "", "text": start_text,
                             "choices": {"A": opt_a, "B": opt_b},
                             "consequences": {
-                                "A": {"next": "win", "change": 50, "analysis": "✅ Tốt"},
-                                "B": {"next": "lose", "change": -50, "analysis": "❌ Kém"}
+                                "A": {"next": "win", "change": 50, "analysis": "✅ Giải quyết tốt."},
+                                "B": {"next": "lose", "change": -50, "analysis": "❌ Giải quyết kém."}
                             }
                         },
                         "win": {"type": "WIN", "title": "THẮNG", "text": res_a, "img": "", "score": 100},
@@ -246,11 +269,16 @@ def create_new_scenario_ui():
                 data = load_data()
                 data[new_id] = new_entry
                 save_data(data)
-                st.success("Đã lưu!")
+                st.success("Đã lưu thành công!")
                 time.sleep(1)
-                st.rerun()
+                safe_rerun()
+            else:
+                st.warning("Vui lòng nhập đủ thông tin.")
 
-# --- STATE MANAGEMENT ---
+# ==============================================================================
+# 6. MAIN APP LOOP
+# ==============================================================================
+# Khởi tạo Session State
 if 'current_scenario' not in st.session_state: st.session_state.current_scenario = None
 if 'current_step' not in st.session_state: st.session_state.current_step = None
 if 'patience_meter' not in st.session_state: st.session_state.patience_meter = 50
@@ -274,21 +302,20 @@ def make_choice(choice_key, step_data):
         "change": consequence['change']
     })
 
-# --- MENU & NAVIGATION ---
+# --- GIAO DIỆN CHÍNH ---
 ALL_SCENARIOS = load_data()
 
 with st.sidebar:
     st.title("🎛️ Menu")
-    menu = st.radio("Chọn chế độ", ["Học viên", "🛠️ Tạo Kịch Bản", "🔐 Quản trị viên (Admin)"])
+    menu = st.radio("Chế độ", ["Học viên", "🛠️ Tạo Kịch Bản", "🔐 Admin"])
     st.divider()
-    if st.button("⚠️ Reset Dữ liệu gốc"):
+    if st.button("⚠️ Reset Dữ liệu"):
         load_data(force_reset=True)
         st.success("Đã reset!")
         time.sleep(1)
-        st.rerun()
+        safe_rerun()
 
-# --- LOGIC CÁC TRANG ---
-if menu == "🔐 Quản trị viên (Admin)":
+if menu == "🔐 Admin":
     reset_game()
     admin_dashboard()
 
@@ -297,113 +324,131 @@ elif menu == "🛠️ Tạo Kịch Bản":
     create_new_scenario_ui()
 
 elif menu == "Học viên":
-    # 1. Nhập tên
+    # 1. Màn hình nhập tên
     if not st.session_state.player_name:
-        st.title("🎓 Chào mừng đến khóa huấn luyện")
-        st.info("Vui lòng nhập tên để hệ thống ghi nhận thành tích.")
-        name_input = st.text_input("Họ và tên của bạn:", placeholder="Nguyễn Văn A...")
-        if name_input:
-            st.session_state.player_name = name_input
-            st.rerun()
+        st.title("🎓 Chào mừng đặc vụ mới")
+        st.info("Nhập tên để bắt đầu hồ sơ huấn luyện.")
+        name_in = st.text_input("Tên của bạn:")
+        if name_in:
+            st.session_state.player_name = name_in
+            safe_rerun()
         st.stop()
 
-    # 2. Dashboard Học viên
+    # 2. Dashboard chọn bài
     if st.session_state.current_scenario is None:
         c1, c2 = st.columns([3, 1])
-        with c1: st.title(f"Xin chào, {st.session_state.player_name} 👋")
-        with c2: 
-            if st.button("Đăng xuất"): 
-                st.session_state.player_name = ""
-                st.rerun()
-        
-        # --- Logic nhận chứng chỉ ---
-        if os.path.exists(HISTORY_FILE):
-            df_my = pd.read_csv(HISTORY_FILE)
-            df_my = df_my[df_my['Player'] == st.session_state.player_name]
-            if not df_my.empty:
-                avg = df_my['Score'].mean()
-                played = len(df_my)
-                st.info(f"📊 Thành tích hiện tại: Đã chơi {played} ván - Điểm trung bình: {avg:.1f}")
-                
-                if avg >= 80 and played >= 1:
-                    with st.expander("🎖️ BẠN CÓ PHẦN THƯỞNG! MỞ NGAY", expanded=True):
-                        render_certificate(st.session_state.player_name)
-        # ----------------------------
+        c1.title(f"Xin chào, {st.session_state.player_name} 👋")
+        if c2.button("Đăng xuất"):
+            st.session_state.player_name = ""
+            safe_rerun()
+            
+        # Kiểm tra chứng chỉ
+        if os.path.exists(HISTORY_FILE) and os.path.getsize(HISTORY_FILE) > 0:
+            try:
+                df = pd.read_csv(HISTORY_FILE)
+                df_me = df[df['Player'] == st.session_state.player_name]
+                if not df_me.empty:
+                    avg = df_me['Score'].mean()
+                    played = len(df_me)
+                    st.success(f"📊 Thành tích: Đã chơi {played} ván - Điểm TB: {avg:.1f}")
+                    if avg >= 80 and played >= 1:
+                        with st.expander("🎖️ BẠN CÓ PHẦN THƯỞNG!", expanded=True):
+                            render_certificate(st.session_state.player_name)
+            except: pass
 
         st.divider()
-        st.subheader("Chọn tình huống luyện tập:")
+        st.subheader("Chọn tình huống:")
+        
         cols = st.columns(2)
         idx = 0
         for key, data in ALL_SCENARIOS.items():
             with cols[idx % 2]:
                 with st.container(border=True):
                     st.subheader(data['title'])
-                    st.markdown(f"*{data['desc']}*")
-                    level_color = "red" if data['difficulty'] == "Hard" else "blue"
-                    st.markdown(f":{level_color}[Level: {data['difficulty']}]")
-                    if st.button(f"🔥 Bắt đầu", key=key, use_container_width=True):
+                    st.write(f"_{data['desc']}_")
+                    st.caption(f"Độ khó: {data['difficulty']}")
+                    if st.button("🔥 Bắt đầu", key=f"btn_{key}", use_container_width=True):
                         st.session_state.current_scenario = key
                         st.session_state.current_step = 'start'
                         st.session_state.patience_meter = data['steps']['start']['patience']
                         st.session_state.history = []
                         if 'score_saved' in st.session_state: del st.session_state.score_saved
-                        st.rerun()
+                        safe_rerun()
             idx += 1
 
-    # 3. Màn hình Chơi Game
+    # 3. Màn hình chơi (Game Loop)
     else:
         s_key = st.session_state.current_scenario
-        if s_key not in ALL_SCENARIOS: reset_game(); st.rerun()
+        if s_key not in ALL_SCENARIOS:
+            reset_game()
+            safe_rerun()
+        
         s_data = ALL_SCENARIOS[s_key]
+        
+        # Kiểm tra step hợp lệ
+        if st.session_state.current_step not in s_data['steps']:
+            st.error("Lỗi: Bước không tồn tại!")
+            if st.button("Về menu"): reset_game(); safe_rerun()
+            st.stop()
+            
         step_data = s_data['steps'][st.session_state.current_step]
 
         # Sidebar thông tin
         with st.sidebar:
             st.divider()
-            st.button("❌ Thoát", on_click=reset_game, use_container_width=True)
+            if st.button("❌ Thoát về Menu"):
+                reset_game()
+                safe_rerun()
+            st.divider()
+            
             cust = s_data['customer']
             if cust.get('avatar'): st.image(cust['avatar'], width=100)
             st.write(f"**{cust['name']}**")
-            st.progress(st.session_state.patience_meter / 100, text=f"Kiên nhẫn: {st.session_state.patience_meter}%")
+            st.write(f"Đặc điểm: {', '.join(cust['traits'])}")
+            
+            p_val = st.session_state.patience_meter
+            st.write(f"Kiên nhẫn: {p_val}%")
+            st.progress(p_val / 100)
 
         # Xử lý nội dung
-        if "type" in step_data: # Kết thúc
+        if "type" in step_data: # Kết thúc Game
             st.markdown(f"# {step_data['title']}")
             
-            # Lưu điểm
+            # Lưu điểm (chỉ lưu 1 lần)
             if 'score_saved' not in st.session_state:
                 save_score(st.session_state.player_name, s_data['title'], step_data['score'], step_data['type'])
                 st.session_state.score_saved = True
             
-            # Hiển thị kết quả
             c1, c2 = st.columns([1, 2])
-            with c1: 
+            with c1:
                 if step_data.get('img'): st.image(step_data['img'])
             with c2:
-                if step_data['type'] == 'WIN': 
+                if step_data['type'] == 'WIN':
                     st.success(step_data['text'])
                     st.balloons()
-                else: 
+                else:
                     st.error(step_data['text'])
-                st.metric("ĐIỂM SỐ", step_data['score'])
-                if st.button("🔄 Quay về Menu chính", use_container_width=True):
+                
+                st.metric("KẾT QUẢ", f"{step_data['score']} điểm")
+                if st.button("🔄 Chơi lại / Về Menu", use_container_width=True):
                     reset_game()
-                    st.rerun()
+                    safe_rerun()
             
-            # Phân tích
-            st.subheader("📝 Rút kinh nghiệm:")
+            st.subheader("🔍 Phân tích chi tiết:")
             for h in st.session_state.history:
                 icon = "✅" if h['change'] > 0 else "❌"
-                st.info(f"{icon} **{h['choice']}**\n\n👉 {h['analysis']}")
+                st.info(f"{icon} Bạn chọn: **{h['choice']}**\n\n👉 {h['analysis']}")
 
         else: # Đang chơi
             st.subheader(s_data['title'])
+            
             c1, c2 = st.columns([1, 2])
-            with c1: 
+            with c1:
                 if step_data.get('img'): st.image(step_data['img'])
             with c2:
                 st.markdown(f"<div class='chat-container'><b>{cust['name']} nói:</b><br><i>\"{step_data['text']}\"</i></div>", unsafe_allow_html=True)
+                
                 for k, v in step_data['choices'].items():
                     if st.button(f"{k}. {v}", use_container_width=True):
                         make_choice(k, step_data)
-                        st.rerun()
+                        safe_rerun()
