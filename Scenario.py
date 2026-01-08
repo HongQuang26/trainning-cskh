@@ -4,12 +4,57 @@ import os
 import time
 import pandas as pd
 from datetime import datetime
+import urllib.parse
+import google.generativeai as genai
+
+# ==============================================================================
+# 0. CẤU HÌNH AI & API KEY
+# ==============================================================================
+# Mã API Key của bạn đã được nhúng sẵn
+GEMINI_API_KEY = "AIzaSyD5ma9Q__JMZUs6mjBppEHUcUBpsI-wjXA"
+
+def init_ai():
+    """Khởi tạo cấu hình cho Gemini"""
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        return True
+    except Exception as e:
+        st.error(f"Lỗi cấu hình AI: {e}")
+        return False
+
+def generate_ai_image_url(scenario_context):
+    """
+    Hàm này dùng Gemini để 'tưởng tượng' ra khung cảnh, 
+    sau đó dùng Pollinations AI để render ảnh.
+    """
+    try:
+        # 1. Dùng Gemini Flash 1.5 để tạo mô tả ảnh (Prompt Engineering)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = f"""
+        Based on this scenario description: "{scenario_context}"
+        Write a detailed visual description (image prompt) to generate an illustration.
+        - Style: Cinematic, Realistic, Professional photography, 4k.
+        - Focus on the emotion of the characters and the setting.
+        - Output ONLY the prompt in English. Do not add any introduction.
+        """
+        response = model.generate_content(prompt)
+        image_prompt = response.text.strip()
+        
+        # 2. Tạo URL ảnh từ Pollinations AI (Miễn phí, không cần key tạo ảnh)
+        # Seed giúp ảnh cố định, không bị đổi mỗi khi load lại nếu prompt giống nhau
+        seed = int(time.time()) 
+        encoded_prompt = urllib.parse.quote(image_prompt)
+        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=800&height=450&nologo=true&seed={seed}&model=flux"
+        return image_url
+    except Exception as e:
+        # Fallback nếu lỗi kết nối
+        return "https://placehold.co/800x450?text=AI+Image+Generation+Error"
 
 # ==============================================================================
 # 1. CẤU HÌNH & GIAO DIỆN (CONFIGURATION & UI)
 # ==============================================================================
 st.set_page_config(
-    page_title="Service Hero Training",
+    page_title="Service Hero Training (AI Powered)",
     page_icon="🦸‍♂️",
     layout="wide"
 )
@@ -36,8 +81,14 @@ st.markdown("""
     
     .analysis-box-good { background: #d4edda; padding: 10px; border-radius: 5px; color: #155724; margin-bottom: 5px; }
     .analysis-box-bad { background: #f8d7da; padding: 10px; border-radius: 5px; color: #721c24; margin-bottom: 5px; }
+    
+    /* Hiệu ứng loading cho ảnh AI */
+    .stImage { transition: opacity 0.5s ease-in-out; }
 </style>
 """, unsafe_allow_html=True)
+
+# Khởi tạo AI ngay khi chạy app
+init_ai()
 
 # ==============================================================================
 # 2. DỮ LIỆU KỊCH BẢN (DATASET)
@@ -48,33 +99,31 @@ INITIAL_DATA = {
         "title": "F&B: Dị vật trong món ăn",
         "desc": "Tóc trong súp. Giải quyết trong 3 bước.",
         "difficulty": "Hard",
-        "customer": {"name": "Ms. Jade", "avatar": "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?q=80&w=400", "traits": ["Kỹ tính", "Reviewer nổi tiếng"], "spending": "Khách mới"},
+        "customer": {"name": "Ms. Jade", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Jade", "traits": ["Kỹ tính", "Reviewer nổi tiếng"], "spending": "Khách mới"},
         "steps": {
             "start": { # TURN 1
-                "patience": 30, "img": "https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?q=80&w=800",
+                "patience": 30, 
                 "text": "Quản lý đâu! Nhìn xem! Một sợi tóc dài trong súp của tôi! Các người cho tôi ăn rác đấy à?",
                 "choices": {"A": "Phủ nhận: 'Không phải tóc nhân viên chúng tôi.'", "B": "Hành động: 'Tôi vô cùng xin lỗi! Tôi sẽ xử lý ngay.'"},
                 "consequences": {"A": {"next": "game_over_bad", "change": -40, "analysis": "❌ Phủ nhận làm mất niềm tin ngay lập tức."}, "B": {"next": "step_2_wait", "change": +10, "analysis": "✅ Hành động ngay lập tức là chính xác."}}
             },
             "step_2_wait": { # TURN 2
-                "patience": 40, "img": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=800",
+                "patience": 40, 
                 "text": "(5 phút sau, bạn mang súp mới ra) Tôi hết muốn ăn rồi. Đợi lâu quá tôi mất cả hứng. Bạn tôi ăn gần xong rồi.",
                 "choices": {"A": "Thuyết phục: 'Mời chị thử đi ạ, bếp trưởng làm riêng đấy.'", "B": "Chuyển hướng: 'Tôi hoàn toàn hiểu ạ. Tôi xin phép dọn món này đi. Tôi có thể mời chị đồ uống hoặc tráng miệng thay thế không?'"},
                 "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Đừng ép khách ăn khi họ đang bực."}, "B": {"next": "step_3_bill", "change": +20, "analysis": "✅ Tôn trọng cảm xúc và đưa ra giải pháp thay thế."}}
             },
             "step_3_bill": { # TURN 3
-                "patience": 60, "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800",
+                "patience": 60, 
                 "text": "Thôi được, cho tôi ly rượu vang. Nhưng tối nay hỏng bét rồi. Mang hóa đơn ra đây.",
                 "choices": {"A": "Giảm giá: 'Gửi chị hóa đơn giảm 10% ạ.'", "B": "Đền bù: 'Bữa tối nay nhà hàng xin mời. Và đây là voucher cho lần sau ạ.'"},
                 "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ 10% cho một buổi tối tồi tệ là sự xúc phạm."}, "B": {"next": "game_over_good", "change": +40, "analysis": "🏆 Đền bù vượt mong đợi biến thảm họa thành khoảnh khắc Wow."}}
             },
-            "game_over_good": {"type": "WIN", "title": "KHÔI PHỤC NIỀM TIN", "text": "Cô ấy bất ngờ vì sự hào phóng và đã tip cho nhân viên.", "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "MẤT KHÁCH", "text": "Cô ấy thanh toán nhưng để lại đánh giá 1 sao.", "img": "https://images.unsplash.com/photo-1522029916167-9c1a97aa3c24?q=80&w=800", "score": 40},
-            "game_over_bad": {"type": "LOSE", "title": "THẢM HỌA TRUYỀN THÔNG", "text": "Video cãi nhau lan truyền trên mạng.", "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800", "score": 0}
+            "game_over_good": {"type": "WIN", "title": "KHÔI PHỤC NIỀM TIN", "text": "Cô ấy bất ngờ vì sự hào phóng và đã tip cho nhân viên.", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "MẤT KHÁCH", "text": "Cô ấy thanh toán nhưng để lại đánh giá 1 sao.", "score": 40},
+            "game_over_bad": {"type": "LOSE", "title": "THẢM HỌA TRUYỀN THÔNG", "text": "Video cãi nhau lan truyền trên mạng.", "score": 0}
         }
-    },
-    # ... (Bạn có thể giữ nguyên các scenario khác ở đây hoặc copy từ file cũ vào) ...
-    # Để file gọn gàng, tôi demo 1 scenario đầy đủ, code sẽ tự load thêm nếu file json có sẵn.
+    }
 }
 
 DB_FILE = "scenarios.json"
@@ -84,19 +133,16 @@ HISTORY_FILE = "score_history.csv"
 def load_data(force_reset=False):
     """Load từ JSON hoặc tạo mới từ INITIAL_DATA."""
     if force_reset or not os.path.exists(DB_FILE):
-        # Nếu buộc reset hoặc file chưa có -> Dùng dữ liệu gốc
         with open(DB_FILE, 'w', encoding='utf-8') as f:
             json.dump(INITIAL_DATA, f, ensure_ascii=False, indent=4)
         return INITIAL_DATA.copy()
     
-    # Nếu file đã tồn tại -> Load lên
     with open(DB_FILE, 'r', encoding='utf-8') as f:
         try:
             data = json.load(f)
         except:
             data = INITIAL_DATA.copy()
         
-    # MERGE LOGIC: Thêm kịch bản mới từ code vào file json nếu thiếu
     updated = False
     for k, v in INITIAL_DATA.items():
         if k not in data:
@@ -120,9 +166,8 @@ def delete_scenario(key):
         return True
     return False
 
-# --- QUẢN LÝ LỊCH SỬ ĐIỂM SỐ (TÍNH NĂNG MỚI) ---
+# --- QUẢN LÝ LỊCH SỬ ĐIỂM SỐ ---
 def save_score(player_name, scenario_title, score, outcome):
-    """Lưu điểm người chơi vào file CSV"""
     new_record = {
         "Thời gian": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "Người chơi": player_name,
@@ -136,16 +181,13 @@ def save_score(player_name, scenario_title, score, outcome):
     else:
         df = pd.DataFrame(columns=["Thời gian", "Người chơi", "Kịch bản", "Điểm", "Kết quả"])
     
-    # Dùng pd.concat thay vì append
     new_df = pd.DataFrame([new_record])
     df = pd.concat([df, new_df], ignore_index=True)
     df.to_csv(HISTORY_FILE, index=False)
 
 def show_leaderboard():
-    """Hiển thị bảng xếp hạng"""
     if os.path.exists(HISTORY_FILE):
         df = pd.read_csv(HISTORY_FILE)
-        # Sắp xếp theo điểm cao nhất
         if not df.empty:
             df_sorted = df.sort_values(by="Điểm", ascending=False).head(10)
             st.dataframe(df_sorted, use_container_width=True, hide_index=True)
@@ -159,7 +201,7 @@ def show_leaderboard():
 # ==============================================================================
 def create_new_scenario_ui():
     st.header("🛠️ Tạo Kịch Bản Mới")
-    st.info("Tạo nhanh kịch bản 1 bước (Quick Scenario).")
+    st.info("💡 Mẹo: Bạn chỉ cần nhập nội dung, Gemini sẽ tự động vẽ ảnh minh họa khi chơi!")
     
     with st.form("creator_form"):
         c1, c2 = st.columns(2)
@@ -192,10 +234,11 @@ def create_new_scenario_ui():
                 new_id = f"SC_CUSTOM_{int(time.time())}"
                 new_entry = {
                     "title": title, "desc": desc, "difficulty": difficulty,
-                    "customer": {"name": cust_name, "avatar": "https://images.unsplash.com/photo-1511367461989-f85a21fda167?q=80&w=400", "traits": [cust_trait], "spending": cust_spend},
+                    "customer": {"name": cust_name, "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=" + cust_name, "traits": [cust_trait], "spending": cust_spend},
                     "steps": {
                         "start": {
-                            "patience": 40, "img": "https://images.unsplash.com/photo-1528642474493-1df4321024e1?q=80&w=800",
+                            "patience": 40,
+                            # Không cần trường 'img', AI sẽ tự lo
                             "text": start_text,
                             "choices": {"A": opt_a_text, "B": opt_b_text},
                             "consequences": {
@@ -203,8 +246,8 @@ def create_new_scenario_ui():
                                 "B": {"next": "lose", "change": -40, "analysis": f"❌ {opt_b_analysis}"}
                             }
                         },
-                        "win": {"type": "WIN", "title": "THÀNH CÔNG", "text": opt_a_result, "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800", "score": 100},
-                        "lose": {"type": "THẤT BẠI", "text": opt_b_result, "img": "https://images.unsplash.com/photo-1593529467220-9d721ceb9a78?q=80&w=800", "score": 0}
+                        "win": {"type": "WIN", "title": "THÀNH CÔNG", "text": opt_a_result, "score": 100},
+                        "lose": {"type": "THẤT BẠI", "text": opt_b_result, "score": 0}
                     }
                 }
                 data = load_data()
@@ -220,13 +263,14 @@ if 'current_step' not in st.session_state: st.session_state.current_step = None
 if 'patience_meter' not in st.session_state: st.session_state.patience_meter = 50
 if 'history' not in st.session_state: st.session_state.history = []
 if 'player_name' not in st.session_state: st.session_state.player_name = ""
+if 'img_cache' not in st.session_state: st.session_state.img_cache = {} # Cache ảnh AI
 
 def reset_game():
     st.session_state.current_scenario = None
     st.session_state.current_step = None
     st.session_state.patience_meter = 50
     st.session_state.history = []
-    # Không reset player_name để họ không phải nhập lại nhiều lần
+    # Không clear img_cache để tận dụng lại ảnh đã tạo
 
 def make_choice(choice_key, step_data):
     consequence = step_data['consequences'][choice_key]
@@ -250,7 +294,7 @@ with st.sidebar:
     menu = st.radio("Điều hướng", ["Dashboard", "🛠️ Tạo Kịch Bản Mới"])
     st.divider()
     
-    # Nút Reset dữ liệu (Sửa lỗi cập nhật)
+    # Nút Reset dữ liệu
     if st.button("⚠️ Khôi phục Dữ liệu gốc", help="Nhấn nút này nếu code mới không cập nhật nội dung"):
         load_data(force_reset=True)
         st.success("Đã khôi phục dữ liệu gốc!")
@@ -258,7 +302,7 @@ with st.sidebar:
         st.rerun()
         
     st.divider()
-    st.caption("SERVICE HERO – INTERACTIVE TRAINING HUB")
+    st.caption("SERVICE HERO (AI INSIDE)")
 
 if menu == "🛠️ Tạo Kịch Bản Mới":
     reset_game()
@@ -278,7 +322,7 @@ elif menu == "Dashboard":
             st.warning("👋 Xin chào! Vui lòng nhập tên của bạn để bắt đầu huấn luyện.")
             st.session_state.player_name = st.text_input("Tên của bạn:", placeholder="Nhập tên và nhấn Enter...")
             if not st.session_state.player_name:
-                st.stop() # Dừng lại tại đây nếu chưa có tên
+                st.stop()
         else:
             c_name, c_change = st.columns([3, 1])
             with c_name: st.success(f"Chào mừng đặc vụ: **{st.session_state.player_name}**")
@@ -287,7 +331,7 @@ elif menu == "Dashboard":
                     st.session_state.player_name = ""
                     st.rerun()
 
-        st.caption(f"Hiện có {len(ALL_SCENARIOS)} tình huống đang chờ xử lý.")
+        st.caption(f"Hiện có {len(ALL_SCENARIOS)} tình huống. Ảnh minh họa được tạo tự động bởi AI!")
         st.divider()
         
         # --- DANH SÁCH KỊCH BẢN ---
@@ -303,7 +347,6 @@ elif menu == "Dashboard":
                             delete_scenario(key)
                             st.rerun()
                     
-                    # Badge độ khó
                     diff_color = "red" if data['difficulty'] == "Hard" or data['difficulty'] == "Khó" else "blue"
                     st.markdown(f":{diff_color}[Độ khó: {data['difficulty']}]")
                     st.write(f"📝 {data['desc']}")
@@ -313,7 +356,6 @@ elif menu == "Dashboard":
                         st.session_state.current_step = 'start'
                         st.session_state.patience_meter = data['steps']['start']['patience']
                         st.session_state.history = []
-                        # Reset cờ đã lưu điểm để ván mới được lưu
                         if 'score_saved' in st.session_state: del st.session_state.score_saved
                         st.rerun()
             count += 1
@@ -324,7 +366,6 @@ elif menu == "Dashboard":
         if s_key not in ALL_SCENARIOS: reset_game(); st.rerun()
         s_data = ALL_SCENARIOS[s_key]
         
-        # Kiểm tra bước hiện tại có tồn tại không
         if st.session_state.current_step not in s_data['steps']:
             st.error("Lỗi kịch bản: Bước không tồn tại.")
             if st.button("Quay lại"): reset_game(); st.rerun()
@@ -332,44 +373,56 @@ elif menu == "Dashboard":
             
         step_data = s_data['steps'][st.session_state.current_step]
         
+        # --- XỬ LÝ ẢNH AI (PHẦN QUAN TRỌNG NHẤT) ---
+        cache_key = f"{s_key}_{st.session_state.current_step}"
+        current_img_url = ""
+        
+        # Kiểm tra xem ảnh cho bước này đã có trong cache chưa
+        if cache_key in st.session_state.img_cache:
+            current_img_url = st.session_state.img_cache[cache_key]
+        else:
+            # Nếu chưa có, dùng AI tạo mới
+            # Nếu trong JSON đã có ảnh cứng (URL Unsplash cũ) thì ưu tiên dùng
+            if "img" in step_data and "unsplash" in step_data["img"]:
+                 current_img_url = step_data["img"]
+            else:
+                with st.spinner("🤖 AI đang vẽ lại hiện trường..."):
+                    # Tạo context cho AI hiểu
+                    context_desc = f"Tình huống: {s_data['title']}. Khách hàng {s_data['customer']['name']} nói: '{step_data.get('text', '')}'."
+                    if "type" in step_data: context_desc += f" Kết quả: {step_data['title']}"
+                    
+                    # Gọi hàm tạo ảnh
+                    current_img_url = generate_ai_image_url(context_desc)
+                    # Lưu vào cache
+                    st.session_state.img_cache[cache_key] = current_img_url
+        
         # Sidebar thông tin khách
         with st.sidebar:
             st.divider()
             st.button("❌ Thoát Game", on_click=reset_game, use_container_width=True)
             st.divider()
             cust = s_data['customer']
-            try:
-                st.image(cust['avatar'], width=100)
-            except:
-                st.write("🖼️ (Ảnh lỗi)")
+            st.image(cust['avatar'], width=80)
             st.write(f"**{cust['name']}**")
             st.write(f"Đặc điểm: {', '.join(cust['traits'])}")
             
-            # Thanh kiên nhẫn
             color_bar = "green" if st.session_state.patience_meter > 50 else "red"
             st.write(f"Độ kiên nhẫn: :{color_bar}[{st.session_state.patience_meter}%]")
             st.progress(st.session_state.patience_meter / 100)
 
         # Xử lý hiển thị
         if "type" in step_data:
-            # --- MÀN HÌNH KẾT THÚC (WIN/LOSE) ---
+            # --- MÀN HÌNH KẾT THÚC ---
             st.markdown(f"# {step_data['title']}")
             
-            # --- LƯU ĐIỂM TỰ ĐỘNG ---
             if 'score_saved' not in st.session_state:
-                save_score(
-                    st.session_state.player_name, 
-                    s_data['title'], 
-                    step_data['score'], 
-                    step_data['type']
-                )
-                st.session_state.score_saved = True # Đánh dấu đã lưu
-            # -------------------------
+                save_score(st.session_state.player_name, s_data['title'], step_data['score'], step_data['type'])
+                st.session_state.score_saved = True
 
             c1, c2 = st.columns([1, 1.5])
             with c1: 
-                try: st.image(step_data['img'], use_container_width=True)
-                except: st.warning("Không tải được ảnh minh họa")
+                # Hiển thị ảnh AI
+                st.image(current_img_url, use_container_width=True, caption="Ảnh minh họa bởi AI")
             with c2:
                 if step_data['type'] == 'WIN': st.success(step_data['text']); st.balloons()
                 else: st.error(step_data['text'])
@@ -391,13 +444,11 @@ elif menu == "Dashboard":
             st.subheader(s_data['title'])
             c1, c2 = st.columns([1, 2])
             with c1: 
-                try: st.image(step_data['img'], use_container_width=True)
-                except: st.warning("Đang tải ảnh...")
+                # Hiển thị ảnh AI
+                st.image(current_img_url, use_container_width=True, caption="Ảnh minh họa bởi AI")
             with c2:
-                # Hiển thị hội thoại
                 st.markdown(f"<div class='chat-container'><div class='customer-name'>🗣️ {cust['name']}</div><div class='dialogue'>\"{step_data['text']}\"</div></div>", unsafe_allow_html=True)
                 
-                # Hiển thị lựa chọn
                 for k, v in step_data['choices'].items():
                     if st.button(f"{k}. {v}", use_container_width=True): 
                         make_choice(k, step_data)
