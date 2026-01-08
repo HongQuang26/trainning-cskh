@@ -35,7 +35,7 @@ def get_gemini_keywords(scenario_context):
     """
     Dùng Gemini để phân tích tình huống và trả về 3 từ khóa tiếng Anh chính xác nhất.
     """
-    if not AI_READY: return "business,meeting,office"
+    if not AI_READY: return "business,office,meeting"
     
     try:
         # Prompt tối ưu để Gemini chỉ trả về từ khóa
@@ -190,44 +190,114 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 3. DỮ LIỆU KỊCH BẢN (11 SCENARIOS)
+# 3. DỮ LIỆU KỊCH BẢN (11 SCENARIOS) - ĐÃ CÓ AVATAR
 # ==============================================================================
 INITIAL_DATA = {
-    "SC_FNB": {"title": "F&B: Hair in Soup", "desc": "Customer found hair.", "difficulty": "HARD", "customer": {"name": "Jade", "traits": ["Picky"]}, 
-               "steps": {"start": {"text": "There's hair in my soup!", "choices": {"A":"Deny", "B":"Apologize"}, "consequences": {"A":{"next":"lose","change":-40,"analysis":"Bad"}, "B":{"next":"step2","change":10,"analysis":"Good"}}}, 
-                         "step2": {"text": "I'm leaving!", "choices": {"A":"Let go", "B":"Dessert"}, "consequences": {"A":{"next":"lose","change":-10,"analysis":"Lost"}, "B":{"next":"win","change":40,"analysis":"Saved"}}},
-                         "win": {"type":"WIN", "title":"SAVED", "text":"Happy.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Bad review.", "score":40}}},
-    "SC_HOTEL": {"title": "Hotel: No Room", "desc": "Overbooked suite.", "difficulty": "EXTREME", "customer": {"name": "Mike", "traits": ["Tired"]}, 
-                 "steps": {"start": {"text": "Where is my room?", "choices": {"A":"Error", "B":"My Fault"}, "consequences": {"A":{"next":"lose","change":-30,"analysis":"Excuses"}, "B":{"next":"step2","change":20,"analysis":"Ownership"}}}, 
-                           "step2": {"text": "Fix it!", "choices": {"A":"Breakfast", "B":"Upgrade"}, "consequences": {"A":{"next":"lose","change":-10,"analysis":"Cheap"}, "B":{"next":"win","change":50,"analysis":"Hero"}}},
-                           "win": {"type":"WIN", "title":"DREAM", "text":"Loved it.", "score":100}, "lose": {"type":"LOSE", "title":"LEFT", "text":"Walked out.", "score":0}}},
-    "SC_TECH": {"title": "IT: Net Down", "desc": "Meeting cut off.", "difficulty": "MEDIUM", "customer": {"name": "Ken", "traits": ["Urgent"]}, 
-                "steps": {"start": {"text": "Net down!", "choices": {"A":"Restart", "B":"Check"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
-                          "win": {"type":"WIN", "title":"FIXED", "text":"Online.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Churn.", "score":0}}},
-    "SC_RETAIL": {"title": "Retail: Broken", "desc": "Vase arrived broken.", "difficulty": "HARD", "customer": {"name": "Lan", "traits": ["VIP"]}, 
-                  "steps": {"start": {"text": "It's broken!", "choices": {"A":"Refund", "B":"Replace"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
-                            "win": {"type":"WIN", "title":"FIXED", "text":"Replaced.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Lost VIP.", "score":0}}},
-    "SC_ECOMM": {"title": "E-comm: Lost", "desc": "Package missing.", "difficulty": "MEDIUM", "customer": {"name": "Tom", "traits": ["Anxious"]}, 
-                 "steps": {"start": {"text": "Where is it?", "choices": {"A":"Wait", "B":"Check"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Lazy"}, "B":{"next":"win","change":20,"analysis":"Helpful"}}}, 
-                           "win": {"type":"WIN", "title":"FOUND", "text":"Got it.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Refund.", "score":0}}},
-    "SC_BANK": {"title": "Bank: Card Eaten", "desc": "ATM took card.", "difficulty": "HARD", "customer": {"name": "Eve", "traits": ["Old"]}, 
-                "steps": {"start": {"text": "My card!", "choices": {"A":"Wait", "B":"Help"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
-                          "win": {"type":"WIN", "title":"SAFE", "text":"Solved.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Left.", "score":0}}},
-    "SC_AIRLINE": {"title": "Airline: Cancel", "desc": "Flight cancelled.", "difficulty": "EXTREME", "customer": {"name": "Dave", "traits": ["Panic"]}, 
-                   "steps": {"start": {"text": "Cancelled?!", "choices": {"A":"Sorry", "B":"Rebook"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
-                             "win": {"type":"WIN", "title":"FLYING", "text":"Rebooked.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Missed.", "score":0}}},
-    "SC_SPA": {"title": "Spa: Allergy", "desc": "Face burning.", "difficulty": "HARD", "customer": {"name": "Chloe", "traits": ["Pain"]}, 
-               "steps": {"start": {"text": "Ouch!", "choices": {"A":"Ignore", "B":"Ice"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Cruel"}, "B":{"next":"win","change":20,"analysis":"Care"}}}, 
-                         "win": {"type":"WIN", "title":"HEALED", "text":"Ok now.", "score":100}, "lose": {"type":"LOSE", "title":"SUED", "text":"Lawsuit.", "score":0}}},
-    "SC_SAAS": {"title": "SaaS: Data Loss", "desc": "Deleted data.", "difficulty": "HARD", "customer": {"name": "Sarah", "traits": ["Angry"]}, 
-                "steps": {"start": {"text": "Gone!", "choices": {"A":"Oops", "B":"Restore"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
-                          "win": {"type":"WIN", "title":"SAVED", "text":"Restored.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Fired.", "score":0}}},
-    "SC_REAL": {"title": "Real Est: Mold", "desc": "Moldy apartment.", "difficulty": "VERY HARD", "customer": {"name": "Chen", "traits": ["Rich"]}, 
-                "steps": {"start": {"text": "Mold!", "choices": {"A":"Clean", "B":"Move"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
-                          "win": {"type":"WIN", "title":"HAPPY", "text":"Moved.", "score":100}, "lose": {"type":"LOSE", "title":"SUED", "text":"Health issue.", "score":0}}},
-    "SC_LOG": {"title": "Logistics: Broken", "desc": "Gear broken.", "difficulty": "VERY HARD", "customer": {"name": "Rob", "traits": ["Mad"]}, 
-               "steps": {"start": {"text": "Broken!", "choices": {"A":"Claim", "B":"Truck"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
-                         "win": {"type":"WIN", "title":"SAVED", "text":"Saved.", "score":100}, "lose": {"type":"LOSE", "title":"FIRED", "text":"Lost.", "score":0}}}
+    "SC_FNB": {
+        "title": "F&B: Hair in Soup", 
+        "desc": "Customer found hair.", 
+        "difficulty": "HARD", 
+        "customer": {"name": "Jade", "traits": ["Picky"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Jade"}, 
+        "steps": {
+            "start": {"text": "There's hair in my soup!", "choices": {"A":"Deny", "B":"Apologize"}, "consequences": {"A":{"next":"lose","change":-40,"analysis":"Bad"}, "B":{"next":"step2","change":10,"analysis":"Good"}}}, 
+            "step2": {"text": "I'm leaving!", "choices": {"A":"Let go", "B":"Dessert"}, "consequences": {"A":{"next":"lose","change":-10,"analysis":"Lost"}, "B":{"next":"win","change":40,"analysis":"Saved"}}},
+            "win": {"type":"WIN", "title":"SAVED", "text":"Happy.", "score":100}, 
+            "lose": {"type":"LOSE", "title":"FAIL", "text":"Bad review.", "score":40}
+        }
+    },
+    "SC_HOTEL": {
+        "title": "Hotel: No Room", 
+        "desc": "Overbooked suite.", 
+        "difficulty": "EXTREME", 
+        "customer": {"name": "Mike", "traits": ["Tired"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike"}, 
+        "steps": {
+            "start": {"text": "Where is my Ocean View?", "choices": {"A":"Error", "B":"My Fault"}, "consequences": {"A":{"next":"lose","change":-30,"analysis":"Excuses"}, "B":{"next":"step2","change":20,"analysis":"Ownership"}}}, 
+            "step2": {"text": "Fix it!", "choices": {"A":"Breakfast", "B":"Upgrade"}, "consequences": {"A":{"next":"lose","change":-10,"analysis":"Cheap"}, "B":{"next":"win","change":50,"analysis":"Hero"}}},
+            "win": {"type":"WIN", "title":"DREAM", "text":"Loved it.", "score":100}, 
+            "lose": {"type":"LOSE", "title":"LEFT", "text":"Walked out.", "score":0}
+        }
+    },
+    "SC_TECH": {
+        "title": "IT: Net Down", "desc": "Meeting interrupted.", "difficulty": "MEDIUM", 
+        "customer": {"name": "Ken", "traits": ["Urgent"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Ken"}, 
+        "steps": {
+            "start": {"text": "Internet is dead!", "choices": {"A":"Restart", "B":"Check"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
+            "win": {"type":"WIN", "title":"FIXED", "text":"Online again.", "score":100}, 
+            "lose": {"type":"LOSE", "title":"FAIL", "text":"Churned.", "score":0}
+        } 
+    },
+    "SC_RETAIL": {
+        "title": "Retail: Broken", "desc": "Vase arrived broken.", "difficulty": "HARD", 
+        "customer": {"name": "Lan", "traits": ["VIP"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Lan"}, 
+        "steps": {
+            "start": {"text": "It's shattered!", "choices": {"A":"Refund", "B":"Replace"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
+            "win": {"type":"WIN", "title":"FIXED", "text":"Replaced.", "score":100}, 
+            "lose": {"type":"LOSE", "title":"FAIL", "text":"Lost VIP.", "score":0}
+        } 
+    },
+    "SC_ECOMM": {
+        "title": "E-comm: Lost", "desc": "Package missing.", "difficulty": "MEDIUM", 
+        "customer": {"name": "Tom", "traits": ["Anxious"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Tom"}, 
+        "steps": {
+            "start": {"text": "Where is it?", "choices": {"A":"Wait", "B":"Check"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Lazy"}, "B":{"next":"win","change":20,"analysis":"Helpful"}}}, 
+            "win": {"type":"WIN", "title":"FOUND", "text":"Got it.", "score":100}, 
+            "lose": {"type":"LOSE", "title":"FAIL", "text":"Refund.", "score":0}
+        } 
+    },
+    "SC_BANK": {
+        "title": "Bank: Card Eaten", "desc": "ATM took card.", "difficulty": "HARD", 
+        "customer": {"name": "Eve", "traits": ["Old"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Eve"}, 
+        "steps": {
+            "start": {"text": "My card!", "choices": {"A":"Wait", "B":"Help"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
+            "win": {"type":"WIN", "title":"SAFE", "text":"Solved.", "score":100}, 
+            "lose": {"type":"LOSE", "title":"FAIL", "text":"Left.", "score":0}
+        } 
+    },
+    "SC_AIRLINE": {
+        "title": "Airline: Cancel", "desc": "Flight cancelled.", "difficulty": "EXTREME", 
+        "customer": {"name": "Dave", "traits": ["Panic"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Dave"}, 
+        "steps": {
+            "start": {"text": "Cancelled?!", "choices": {"A":"Sorry", "B":"Rebook"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
+            "win": {"type":"WIN", "title":"FLYING", "text":"Rebooked.", "score":100}, 
+            "lose": {"type":"LOSE", "title":"FAIL", "text":"Missed.", "score":0}
+        } 
+    },
+    "SC_SPA": {
+        "title": "Spa: Allergy", "desc": "Face burning.", "difficulty": "HARD", 
+        "customer": {"name": "Chloe", "traits": ["Pain"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Chloe"}, 
+        "steps": {
+            "start": {"text": "Ouch!", "choices": {"A":"Ignore", "B":"Ice"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Cruel"}, "B":{"next":"win","change":20,"analysis":"Care"}}}, 
+            "win": {"type":"WIN", "title":"HEALED", "text":"Ok now.", "score":100}, 
+            "lose": {"type":"LOSE", "title":"SUED", "text":"Lawsuit.", "score":0}
+        } 
+    },
+    "SC_SAAS": {
+        "title": "SaaS: Data Loss", "desc": "Deleted data.", "difficulty": "HARD", 
+        "customer": {"name": "Sarah", "traits": ["Angry"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah"}, 
+        "steps": {
+            "start": {"text": "Gone!", "choices": {"A":"Oops", "B":"Restore"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
+            "win": {"type":"WIN", "title":"SAVED", "text":"Restored.", "score":100}, 
+            "lose": {"type":"LOSE", "title":"FAIL", "text":"Fired.", "score":0}
+        } 
+    },
+    "SC_REAL": {
+        "title": "Real Est: Mold", "desc": "Moldy apartment.", "difficulty": "VERY HARD", 
+        "customer": {"name": "Chen", "traits": ["Rich"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Chen"}, 
+        "steps": {
+            "start": {"text": "Mold!", "choices": {"A":"Clean", "B":"Move"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
+            "win": {"type":"WIN", "title":"HAPPY", "text":"Moved.", "score":100}, 
+            "lose": {"type":"LOSE", "title":"SUED", "text":"Health issue.", "score":0}
+        } 
+    },
+    "SC_LOG": {
+        "title": "Logistics: Broken", "desc": "Gear broken.", "difficulty": "VERY HARD", 
+        "customer": {"name": "Rob", "traits": ["Mad"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Rob"}, 
+        "steps": {
+            "start": {"text": "Broken!", "choices": {"A":"Claim", "B":"Truck"}, "consequences": {"A":{"next":"lose","change":-20,"analysis":"Bad"}, "B":{"next":"win","change":20,"analysis":"Good"}}}, 
+            "win": {"type":"WIN", "title":"SAVED", "text":"Saved.", "score":100}, 
+            "lose": {"type":"LOSE", "title":"FIRED", "text":"Lost.", "score":0}
+        } 
+    }
 }
 
 DB_FILE = "scenarios.json"
@@ -359,7 +429,10 @@ if menu == "DASHBOARD":
                 st.rerun()
             
             cust = scenario['customer']
-            st.image(cust['avatar'], width=80)
+            # Dùng avatar có sẵn trong data, nếu không có thì dùng placeholder (nhưng data đã fix đủ)
+            avatar_url = cust.get('avatar', f"https://api.dicebear.com/7.x/avataaars/svg?seed={cust['name']}")
+            st.image(avatar_url, width=80)
+            
             st.markdown(f"**TARGET: {cust['name']}**")
             p = st.session_state.patience
             st.markdown(f"**PATIENCE:** {p}%")
@@ -414,5 +487,5 @@ if menu == "DASHBOARD":
                 idx += 1
 
 elif menu == "CREATE":
-    st.header("SCENARIO BUILDER")
+    st.header("BUILDER")
     st.info("Demo Mode")
