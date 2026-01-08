@@ -56,16 +56,23 @@ BACKUP_IMAGES = {
 }
 
 def get_smart_image(scenario_title, step_text, category_key="GENERAL"):
+    """
+    Hệ thống tạo ảnh thông minh 2 lớp:
+    Lớp 1: Dùng Gemini tạo Prompt -> Pollinations.
+    Lớp 2: Nếu lỗi -> Dùng ảnh Backup từ Unsplash.
+    """
     if AI_READY:
         try:
             prompt_req = f"Extract 3 visual keywords (english nouns) for stock photo: '{scenario_title} - {step_text}'. Comma separated. No intro."
             res = model.generate_content(prompt_req, request_options={"timeout": 3})
             keywords = res.text.strip().replace("\n", "")
+            
             seed = hash(step_text) % 10000
             encoded = urllib.parse.quote(f"{keywords}, highly detailed, cinematic lighting")
             return f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=600&seed={seed}&nologo=true&model=flux"
         except:
             pass
+    
     images = BACKUP_IMAGES.get(category_key, BACKUP_IMAGES["GENERAL"])
     idx = len(step_text) % len(images)
     return images[idx]
@@ -78,7 +85,6 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
     * { font-family: 'Outfit', sans-serif !important; }
 
-    /* NỀN TỐI HIỆN ĐẠI */
     .stApp {
         background: radial-gradient(circle at 10% 20%, rgb(20, 20, 35) 0%, rgb(40, 40, 60) 90%);
         color: #fff;
@@ -88,7 +94,6 @@ st.markdown("""
         border-right: 1px solid rgba(255,255,255,0.1);
     }
 
-    /* CARD KỊCH BẢN */
     .scenario-card {
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -108,7 +113,6 @@ st.markdown("""
         border-bottom: 1px solid rgba(255,255,255,0.1);
     }
     
-    /* CHAT BOX */
     .chat-container {
         background: rgba(0, 0, 0, 0.3);
         border-left: 5px solid #FDBB2D;
@@ -120,7 +124,6 @@ st.markdown("""
     .customer-label { color: #FDBB2D; font-size: 0.9rem; font-weight: bold; letter-spacing: 1px; }
     .dialogue { font-size: 1.4rem; font-style: italic; color: #fff; line-height: 1.5; margin-top: 5px;}
 
-    /* BUTTONS */
     .stButton button {
         background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
         color: #fff !important;
@@ -137,24 +140,17 @@ st.markdown("""
         border: none;
     }
     
-    /* TEXT */
     h1 {
         background: linear-gradient(to right, #00c6ff, #0072ff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 900; letter-spacing: 1px;
     }
-    
-    /* FIX LAYOUT SPACING */
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 5rem;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. DỮ LIỆU KỊCH BẢN (11 SCENARIOS) - ĐÃ CÓ ẢNH BÌA CỐ ĐỊNH (COVER)
+# 2. DỮ LIỆU KỊCH BẢN (11 SCENARIOS)
 # ==============================================================================
 INITIAL_DATA = {
     "SC_FNB": {
@@ -216,7 +212,7 @@ DB_FILE = "scenarios.json"
 HISTORY_FILE = "score_history.csv"
 
 # ==============================================================================
-# 3. UTILS
+# 3. UTILS (XỬ LÝ DỮ LIỆU)
 # ==============================================================================
 def load_data(force_reset=False):
     if force_reset or not os.path.exists(DB_FILE):
@@ -226,8 +222,19 @@ def load_data(force_reset=False):
     try:
         with open(DB_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
+        
+        # FIX ERROR: MERGE MISSING FIELDS
+        # Kiểm tra và thêm các trường thiếu (như cover, avatar, category) vào dữ liệu cũ
         for k, v in INITIAL_DATA.items():
-            if k not in data: data[k] = v
+            if k not in data:
+                data[k] = v
+            else:
+                # Patch missing specific fields in existing items
+                if 'cover' not in data[k]: data[k]['cover'] = v['cover']
+                if 'category' not in data[k]: data[k]['category'] = v.get('category', 'GENERAL')
+                if 'customer' in data[k] and 'avatar' not in data[k]['customer']:
+                    data[k]['customer']['avatar'] = v['customer']['avatar']
+        
         return data
     except: return load_data(True)
 
@@ -270,7 +277,7 @@ if menu == "DASHBOARD":
         st.markdown("# 🚀 MISSION CONTROL")
         
         # --- PLAYER LOGIN SECTION ---
-        # Sử dụng container riêng để tránh xung đột layout
+        # Container riêng biệt để tránh lỗi layout
         login_container = st.container()
         
         if 'player_name' not in st.session_state: st.session_state.player_name = ""
@@ -287,7 +294,7 @@ if menu == "DASHBOARD":
                     st.session_state.player_name = ""
                     st.rerun()
 
-        st.divider() # Ngăn cách rõ ràng
+        st.divider()
 
         # --- LEADERBOARD SECTION ---
         with st.expander("🏆 ELITE AGENTS"):
@@ -301,7 +308,8 @@ if menu == "DASHBOARD":
         idx = 0
         for key, val in ALL_SCENARIOS.items():
             with cols[idx % 2]:
-                img_src = val['cover']
+                # Sử dụng .get() để tránh lỗi KeyError nếu dữ liệu cũ chưa update
+                img_src = val.get('cover', 'https://images.unsplash.com/photo-1557426272-fc759fdf7a8d?q=80&w=800')
                 
                 st.markdown(f"""
                 <div class="scenario-card">
@@ -338,7 +346,8 @@ if menu == "DASHBOARD":
         cache_key = f"{s_key}_{step_id}"
         if cache_key not in st.session_state.step_img_cache:
             # Tạo ảnh mới: Gemini -> Keyword -> Ảnh
-            st.session_state.step_img_cache[cache_key] = get_smart_image(scenario['title'], step_data.get('text', ''), scenario.get('category', 'GENERAL'))
+            cat = scenario.get('category', 'GENERAL')
+            st.session_state.step_img_cache[cache_key] = get_smart_image(scenario['title'], step_data.get('text', ''), cat)
         
         current_img = st.session_state.step_img_cache[cache_key]
         
@@ -350,7 +359,10 @@ if menu == "DASHBOARD":
                 st.rerun()
             
             cust = scenario['customer']
-            st.image(cust['avatar'], width=80)
+            # Dùng .get() để tránh lỗi Avatar
+            avatar = cust.get('avatar', f"https://api.dicebear.com/7.x/avataaars/svg?seed={cust['name']}")
+            st.image(avatar, width=80)
+            
             st.markdown(f"**TARGET: {cust['name']}**")
             p = st.session_state.patience
             st.markdown(f"**PATIENCE:** {p}%")
