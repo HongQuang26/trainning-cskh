@@ -4,138 +4,179 @@ import os
 import time
 import pandas as pd
 from datetime import datetime
+import urllib.parse
+import google.generativeai as genai
+import random
 
 # ==============================================================================
-# 0. CẤU HÌNH & HÌNH ẢNH CỐ ĐỊNH (FIXED ASSETS)
+# 0. CẤU HÌNH & AI ENGINE
 # ==============================================================================
+# API Key Gemini của bạn (Đã nhúng sẵn)
+GEMINI_API_KEY = "AIzaSyD5ma9Q__JMZUs6mjBppEHUcUBpsI-wjXA"
+
 st.set_page_config(
-    page_title="Service Hero Academy",
-    page_icon="💎",
+    page_title="Service Hero: Neon Edition",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# --- BỘ ẢNH CỐ ĐỊNH THEO KỊCH BẢN (CHỌN LỌC & KHÔNG BAO GIỜ CHẾT) ---
-# Sử dụng ảnh chất lượng cao từ Unsplash với ID cụ thể để đảm bảo nội dung khớp 100%
-SCENARIO_IMAGES = {
-    "SC_FNB_01": "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1000&auto=format&fit=crop", # Restaurant context
-    "SC_HOTEL_01": "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1000&auto=format&fit=crop", # Hotel Lobby/Resort
-    "SC_ECOMM_01": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=1000&auto=format&fit=crop", # Delivery/Payment
-    "SC_TECH_01": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=1000&auto=format&fit=crop", # Office work
-    "SC_RETAIL_01": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1000&auto=format&fit=crop", # Retail Store
-    "SC_BANK_01": "https://images.unsplash.com/photo-1601597111158-2fceff292cdc?q=80&w=1000&auto=format&fit=crop", # ATM/Bank
-    "SC_REALESTATE_01": "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=1000&auto=format&fit=crop", # Apartment
-    "SC_SAAS_01": "https://images.unsplash.com/photo-1551434678-e076c223a692?q=80&w=1000&auto=format&fit=crop", # Software/Dashboard
-    "SC_SPA_01": "https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?q=80&w=1000&auto=format&fit=crop", # Spa
-    "SC_LOGISTICS_01": "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1000&auto=format&fit=crop", # Warehouse/Truck
-    "SC_AIRLINE_01": "https://images.unsplash.com/photo-1436491865332-7a61a14527c5?q=80&w=1000&auto=format&fit=crop" # Airport
-}
+# Khởi tạo Gemini
+try:
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    AI_AVAILABLE = True
+except:
+    AI_AVAILABLE = False
 
-FALLBACK_IMG = "https://images.unsplash.com/photo-1557426272-fc759fdf7a8d?q=80&w=1000&auto=format&fit=crop" # Generic Meeting
+# --- HÀM TẠO ẢNH ĐỘNG BẰNG AI (DYNAMIC AI IMAGE GENERATOR) ---
+def generate_dynamic_image(scenario_context, step_text):
+    """
+    1. Dùng Gemini để tóm tắt ngữ cảnh thành 1 prompt vẽ tranh ngắn gọn.
+    2. Gửi prompt đó đến API vẽ tranh để tạo ảnh mới cho TỪNG BƯỚC.
+    """
+    if not AI_AVAILABLE:
+        return "https://placehold.co/1024x576/1a1a2e/FFF?text=AI+Unavailable"
 
-def get_image(scenario_key):
-    return SCENARIO_IMAGES.get(scenario_key, FALLBACK_IMG)
+    try:
+        # Bước 1: Hỏi Gemini lấy keywords (khoảng 5-7 từ tiếng Anh)
+        prompt_request = f"""
+        Task: Create a very short visual prompt (5-7 words, English nouns/adjectives only) for an AI image generator based on this situation.
+        Context: {scenario_context}
+        Current Action: {step_text}
+        Output format provided specifically: keyword1, keyword2, keyword3...
+        """
+        response = model.generate_content(prompt_request, request_options={"timeout": 5})
+        keywords = response.text.strip().replace("\n", " ")
+        
+        # Nếu Gemini trả về rỗng hoặc lỗi, dùng ngữ cảnh cơ bản
+        if not keywords or len(keywords) < 3:
+             keywords = f"{scenario_context} situation"
+
+        # Bước 2: Tạo URL ảnh với seed ngẫu nhiên để mỗi lần là 1 ảnh khác nhau
+        seed = random.randint(0, 999999)
+        # Thêm các từ khóa phong cách để ảnh đẹp hơn
+        full_prompt = f"{keywords}, cinematic lighting, dramatic, 8k resolution, highly detailed"
+        encoded_prompt = urllib.parse.quote(full_prompt)
+        
+        # Sử dụng Pollinations API (mô hình Flux hoặc Turbo) để vẽ
+        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=576&seed={seed}&nologo=true&model=flux"
+        return image_url
+        
+    except Exception as e:
+        # Fallback nếu lỗi kết nối
+        print(f"AI Error: {e}")
+        return f"https://placehold.co/1024x576/1a1a2e/FFF?text=Image+Generation+Failed"
 
 # ==============================================================================
-# 1. GIAO DIỆN TƯƠNG PHẢN CAO (HIGH CONTRAST CSS)
+# 1. GIAO DIỆN NEON/CYBERPUNK (DARK MODE CSS)
 # ==============================================================================
 st.markdown("""
 <style>
-    /* 1. FORCE LIGHT MODE (Ép nền sáng để chữ không bị chìm) */
-    [data-testid="stAppViewContainer"] {
-        background-color: #F3F4F6 !important; /* Xám rất nhạt */
-    }
-    [data-testid="stHeader"] {
-        background-color: #F3F4F6 !important;
+    /* Import Font hiện đại */
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap');
+    * { font-family: 'Rajdhani', sans-serif !important; }
+
+    /* 1. NỀN TỐI TOÀN MÀN HÌNH */
+    .stApp {
+        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e) !important;
+        color: #ffffff !important;
     }
     [data-testid="stSidebar"] {
-        background-color: #FFFFFF !important;
-        border-right: 1px solid #E5E7EB;
+        background-color: rgba(15, 12, 41, 0.9) !important;
+        border-right: 1px solid rgba(255,255,255,0.1);
     }
 
-    /* 2. TEXT VISIBILITY (Màu chữ đen đậm) */
+    /* 2. TEXT & HEADERS (Màu trắng sáng) */
     h1, h2, h3, h4, h5, h6, p, div, span, label {
-        color: #111827 !important; /* Đen than (Charcoal) */
-        font-family: 'Segoe UI', sans-serif;
+        color: #ffffff !important;
+        text-shadow: 0 0 2px rgba(0,0,0,0.5);
     }
-    
-    /* 3. CARD STYLE (Khung trắng nổi bật trên nền xám) */
+    h1 {
+        background: linear-gradient(to right, #00f260, #0575e6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800 !important;
+        text-transform: uppercase;
+    }
+
+    /* 3. THẺ KỊCH BẢN (Glassmorphism + Neon Border) */
     .scenario-card {
-        background-color: #FFFFFF !important;
+        background: rgba(255, 255, 255, 0.05) !important; /* Kính mờ */
+        backdrop-filter: blur(10px);
         padding: 20px;
-        border-radius: 12px;
-        border: 1px solid #E5E7EB;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        margin-bottom: 15px;
-        color: #000000 !important; /* Chữ đen tuyệt đối trong card */
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
     }
-    
-    /* 4. CHAT BUBBLES (Đoạn hội thoại) */
+    .scenario-card:hover {
+        border-color: #00d2ff; /* Viền neon xanh khi hover */
+        box-shadow: 0 0 20px rgba(0, 210, 255, 0.3);
+        transform: translateY(-5px);
+    }
+    .badge {
+        padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;
+        text-transform: uppercase; letter-spacing: 1px;
+    }
+    .badge-hard { background: rgba(255, 0, 128, 0.2); color: #ff0080 !important; border: 1px solid #ff0080; }
+    .badge-med { background: rgba(255, 165, 0, 0.2); color: #ffa500 !important; border: 1px solid #ffa500; }
+
+    /* 4. KHUNG HỘI THOẠI (Chat Bubble) */
     .chat-container {
-        background-color: #FFFFFF !important;
+        background: rgba(0, 0, 0, 0.3) !important;
         padding: 25px;
         border-radius: 15px;
-        border-left: 6px solid #2563EB; /* Xanh dương đậm */
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border-left: 6px solid #00d2ff; /* Thanh neon xanh */
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         margin: 20px 0;
-        color: #000000 !important;
+        border: 1px solid rgba(255,255,255,0.05);
     }
-    
     .customer-label {
-        font-size: 0.9rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        color: #4B5563 !important; /* Xám đậm */
-        margin-bottom: 5px;
+        font-size: 1rem; font-weight: 800; text-transform: uppercase;
+        color: #00d2ff !important; /* Màu neon xanh */
+        margin-bottom: 10px; letter-spacing: 2px;
     }
-    
     .dialogue-text {
-        font-size: 1.3rem;
-        font-style: italic;
-        font-weight: 600;
-        color: #1F2937 !important; /* Đen đậm */
+        font-size: 1.4rem; font-style: italic; font-weight: 500;
         line-height: 1.5;
     }
 
-    /* 5. BUTTONS (Nút bấm tương phản cao) */
+    /* 5. NÚT BẤM (Neon Gradient) */
     .stButton button {
-        background-color: #1E40AF !important; /* Xanh Navy đậm */
-        color: #FFFFFF !important; /* Chữ trắng tinh */
+        /* Gradient Hồng tím -> Xanh dương */
+        background: linear-gradient(45deg, #ff00cc, #333399) !important;
+        color: #ffffff !important;
         font-weight: 700 !important;
         border-radius: 8px !important;
         border: none !important;
-        padding: 12px 20px !important;
-        font-size: 1rem !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        padding: 15px 25px !important;
+        font-size: 1.1rem !important;
+        box-shadow: 0 4px 15px rgba(255, 0, 204, 0.3);
+        transition: all 0.3s ease;
+        text-transform: uppercase;
     }
     .stButton button:hover {
-        background-color: #1e3a8a !important; /* Xanh đậm hơn khi hover */
-        transform: translateY(-2px);
+        box-shadow: 0 0 25px rgba(255, 0, 204, 0.6);
+        transform: scale(1.02);
     }
 
-    /* 6. ANALYSIS BOXES (Kết quả) */
-    .analysis-box {
-        padding: 20px;
-        border-radius: 10px;
-        margin-top: 15px;
-        font-weight: 600;
-    }
-    .win-box { 
-        background-color: #D1FAE5 !important; /* Xanh lá nhạt */
-        border: 2px solid #10B981;
-        color: #065F46 !important; /* Chữ xanh lá đậm */
-    }
-    .lose-box { 
-        background-color: #FEE2E2 !important; /* Đỏ nhạt */
-        border: 2px solid #EF4444;
-        color: #991B1B !important; /* Chữ đỏ đậm */
-    }
+    /* 6. HỘP KẾT QUẢ */
+    .analysis-box { padding: 20px; border-radius: 10px; margin-top: 15px; font-weight: 600; }
+    .win-box { background: rgba(0, 255, 127, 0.15) !important; border: 2px solid #00ff7f; color: #00ff7f !important; }
+    .lose-box { background: rgba(255, 0, 95, 0.15) !important; border: 2px solid #ff005f; color: #ff005f !important; }
     
+    /* 7. Spinner Loading */
+    .stSpinner > div > div {
+        border-top-color: #00d2ff !important;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. DATASET (11 SCENARIOS) - FULL ENGLISH
+# 2. DỮ LIỆU KỊCH BẢN GỐC (ENGLISH)
 # ==============================================================================
 INITIAL_DATA = {
     "SC_FNB_01": {
@@ -156,7 +197,7 @@ INITIAL_DATA = {
             },
             "step_3": { 
                 "text": "Okay, fine. Can I get the bill?",
-                "choices": {"A": "Discount: '10% Off.'", "B": "Compensate: 'Tonight is free. Plus a voucher.'"},
+                "choices": {"A": "Discount: '10% Off.'", "B": "Compensate: 'It is free tonight.'"},
                 "consequences": {"A": {"next": "lose", "change": -20, "analysis": "❌ 10% is insulting here."}, "B": {"next": "win", "change": +40, "analysis": "🏆 Wow moment created."}}
             },
             "win": {"type": "WIN", "title": "SUCCESS", "text": "She left happy.", "score": 100},
@@ -208,7 +249,7 @@ INITIAL_DATA = {
         "customer": {"name": "Tom", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Tom", "traits": ["Anxious"]},
         "steps": {
             "start": { "text": "App says delivered. I see nothing! Scam?", "choices": {"A": "Deflect: 'Check neighbors.'", "B": "Help: 'Checking now.'"}, "consequences": {"A": {"next": "lose", "change": -20, "analysis": "❌ Lazy."}, "B": {"next": "step_2", "change": +20, "analysis": "✅ Helpful."}} },
-            "step_2": { "text": "I need it tomorrow!", "choices": {"A": "Wait: 'Wait 24h.'", "B": "Urgent: 'Calling driver.'"}, "consequences": {"A": {"next": "lose", "change": -20, "analysis": "⚠️ Too slow."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Urgent action."}} },
+            "step_2": { "text": "I need these shoes for tomorrow!", "choices": {"A": "Wait: 'Wait 24h.'", "B": "Urgent: 'Calling driver.'"}, "consequences": {"A": {"next": "lose", "change": -20, "analysis": "⚠️ Too slow."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Urgent action."}} },
             "step_3": { "text": "Driver hid it in a bush?", "choices": {"A": "Hope: 'Check there.'", "B": "Guarantee: 'Check. If missing, I send new pair.'"}, "consequences": {"A": {"next": "lose", "change": 0, "analysis": "😐 Passive."}, "B": {"next": "win", "change": +40, "analysis": "🏆 Risk reversal."}} },
             "win": {"type": "WIN", "title": "FOUND", "text": "He got it.", "score": 100},
             "lose": {"type": "LOSE", "title": "ANGRY", "text": "Refunded.", "score": 30}
@@ -261,7 +302,7 @@ INITIAL_DATA = {
         "steps": {
             "start": { "text": "$4000 for mold? My son has asthma!", "choices": {"A": "Defend: 'Did you air it out?'", "B": "Alert: 'Evacuate now.'"}, "consequences": {"A": {"next": "lose", "change": -40, "analysis": "❌ Blaming customer."}, "B": {"next": "step_2", "change": +30, "analysis": "✅ Safety."}} },
             "step_2": { "text": "Black mold! We can't stay.", "choices": {"A": "Paint: 'Painter coming tomorrow.'", "B": "Move: 'You must move.'"}, "consequences": {"A": {"next": "lose", "change": -30, "analysis": "⚠️ Not safe yet."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Correct."}} },
-            "step_3": { "text": "Where to?", "choices": {"A": "Motel: 'Cheap.'", "B": "Luxury: '5-Star Hotel.'"}, "consequences": {"A": {"next": "lose", "change": -20, "analysis": "❌ Insulting."}, "B": {"next": "win", "change": +50, "analysis": "🏆 Matching standard."}} },
+            "step_3": { "text": "Where to?", "choices": {"A": "Cheap: 'Motel.'", "B": "Luxury: '5-Star Hotel.'"}, "consequences": {"A": {"next": "lose", "change": -20, "analysis": "❌ Insulting."}, "B": {"next": "win", "change": +50, "analysis": "🏆 Matching standard."}} },
             "win": {"type": "WIN", "title": "HAPPY", "text": "Family safe.", "score": 100},
             "lose": {"type": "LOSE", "title": "SUED", "text": "Health lawsuit.", "score": 0}
         }
@@ -311,7 +352,7 @@ DB_FILE = "scenarios.json"
 HISTORY_FILE = "score_history.csv"
 
 # ==============================================================================
-# 3. UTILS
+# 3. UTILS (XỬ LÝ DỮ LIỆU)
 # ==============================================================================
 def load_data(force_reset=False):
     if force_reset or not os.path.exists(DB_FILE):
@@ -339,76 +380,82 @@ def show_leaderboard():
     if os.path.exists(HISTORY_FILE):
         df = pd.read_csv(HISTORY_FILE)
         if not df.empty:
-            st.dataframe(df.sort_values(by="Score", ascending=False).head(5), use_container_width=True, hide_index=True)
+            st.dataframe(df.sort_values(by="Score", ascending=False).head(10), use_container_width=True, hide_index=True)
         else: st.info("No data yet.")
     else: st.info("No history found.")
 
 # ==============================================================================
 # 4. APP LOGIC
 # ==============================================================================
+# Khởi tạo Session State
 if 'current_scenario' not in st.session_state: st.session_state.current_scenario = None
+if 'img_cache' not in st.session_state: st.session_state.img_cache = {}
 
 ALL_SCENARIOS = load_data()
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=70)
-    st.markdown("### Service Hero Academy")
-    menu = st.radio("Navigation", ["Dashboard", "Create"])
+    st.title("⚡ Service Hero")
+    st.caption("Neon Edition - AI Roleplay")
+    menu = st.radio("MENU", ["DASHBOARD", "CREATE"])
     st.divider()
-    if st.button("🔄 Restore Defaults"):
+    if st.button("🔄 RESET DATA"):
         load_data(True)
-        st.success("Restored!")
+        st.toast("System Reset Successfully!", icon="✅")
         time.sleep(1)
         st.rerun()
 
 # --- DASHBOARD ---
-if menu == "Dashboard":
+if menu == "DASHBOARD":
     if st.session_state.current_scenario is None:
-        st.title("🎓 Service Hero Academy")
-        st.markdown("<p style='font-size:1.1rem; color:#4B5563;'>Select a mission to begin your training.</p>", unsafe_allow_html=True)
+        # Màn hình chính
+        st.title("WELCOME AGENT 🕶️")
         
-        # Player Input
         if 'player_name' not in st.session_state: st.session_state.player_name = ""
         if not st.session_state.player_name:
-            st.info("Enter your name to start.")
-            st.session_state.player_name = st.text_input("Name:")
+            st.info("Please identify yourself to proceed.")
+            st.session_state.player_name = st.text_input("CODENAME:")
             if not st.session_state.player_name: st.stop()
         else:
             c1, c2 = st.columns([3, 1])
-            c1.success(f"Agent: **{st.session_state.player_name}**")
-            if c2.button("Log out"): 
+            c1.success(f"ONLINE: **{st.session_state.player_name}**")
+            if c2.button("LOGOUT"): 
                 st.session_state.player_name = ""
                 st.rerun()
 
-        with st.expander("🏆 Top Agents"):
+        with st.expander("🏆 ELITE AGENTS (Leaderboard)"):
             show_leaderboard()
             
         st.divider()
-        st.subheader("Available Scenarios")
+        st.subheader("AVAILABLE MISSIONS")
         
-        # Grid
+        # Lưới hiển thị kịch bản
         cols = st.columns(2)
         idx = 0
         for key, val in ALL_SCENARIOS.items():
             with cols[idx % 2]:
+                # Xác định badge độ khó
                 badge_class = "badge-hard" if "Hard" in val['difficulty'] else "badge-med"
+                
+                # Thẻ kịch bản Neon
                 st.markdown(f"""
                 <div class="scenario-card">
-                    <div class="card-title">{val['title']}</div>
-                    <div class="card-desc">{val['desc']}</div>
+                    <h3>{val['title']}</h3>
+                    <p style="opacity: 0.8;">{val['desc']}</p>
                     <span class="badge {badge_class}">{val['difficulty']}</span>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button(f"Start Mission 🚀", key=key, use_container_width=True):
+                
+                if st.button(f"ENGAGE 🚀", key=key, use_container_width=True):
                     st.session_state.current_scenario = key
                     st.session_state.current_step = 'start'
                     st.session_state.patience = 50
                     st.session_state.history = []
+                    st.session_state.img_cache = {} # Reset cache ảnh khi bắt đầu mới
                     st.rerun()
             idx += 1
 
-    # --- GAMEPLAY ---
+    # --- MÀN HÌNH CHƠI GAME (GAMEPLAY) ---
     else:
         s_key = st.session_state.current_scenario
         if s_key not in ALL_SCENARIOS: 
@@ -419,82 +466,122 @@ if menu == "Dashboard":
         step_id = st.session_state.current_step
         step_data = scenario['steps'].get(step_id, scenario.get(step_id))
         
-        # Get Stable Image
-        img_url = get_image(s_key)
+        # --- XỬ LÝ ẢNH ĐỘNG (DYNAMIC IMAGE) ---
+        # Tạo khóa cache dựa trên kịch bản và bước hiện tại
+        cache_key = f"{s_key}_{step_id}"
         
-        # Sidebar
+        if cache_key not in st.session_state.img_cache:
+            # Nếu chưa có trong cache, hiển thị spinner và gọi AI tạo ảnh
+            with st.spinner("⚡ AI is visualizing the scene..."):
+                # Ngữ cảnh: Tiêu đề + Tên khách + Câu thoại hiện tại
+                context = f"{scenario['title']} with customer {scenario['customer']['name']}"
+                text_content = step_data.get('text', 'Conclusion')
+                # Gọi hàm tạo ảnh
+                img_url = generate_dynamic_image(context, text_content)
+                # Lưu vào cache
+                st.session_state.img_cache[cache_key] = img_url
+        
+        # Lấy ảnh từ cache
+        current_img_url = st.session_state.img_cache[cache_key]
+        # ---------------------------------------
+        
+        # Sidebar thông tin
         with st.sidebar:
             st.divider()
-            if st.button("❌ Exit Mission", use_container_width=True):
+            if st.button("❌ ABORT MISSION", use_container_width=True):
                 st.session_state.current_scenario = None
                 st.rerun()
             
             cust = scenario['customer']
-            st.image(cust['avatar'], width=100)
-            st.markdown(f"**{cust['name']}**")
+            st.image(cust['avatar'], width=80)
+            st.markdown(f"**TARGET: {cust['name']}**")
+            st.caption(", ".join(cust['traits']))
             
+            # Thanh kiên nhẫn Neon
             p = st.session_state.patience
-            color = "green" if p > 50 else "red"
-            st.markdown(f"**Patience:** :{color}[{p}%]")
+            color = "#00d2ff" if p > 50 else "#ff0080"
+            st.markdown(f"**PATIENCE LEVEL:** <span style='color:{color}'>{p}%</span>", unsafe_allow_html=True)
             st.progress(p/100)
 
-        # Game Area
-        if "type" in step_data: # End
+        # Hiển thị nội dung chính
+        if "type" in step_data: # Màn hình kết thúc (Win/Lose)
             st.title(step_data['title'])
-            st.image(img_url, use_container_width=True)
+            # Hiển thị ảnh động đã tạo
+            st.image(current_img_url, use_container_width=True, caption="AI Generated Finale")
             
-            result_class = "win-box" if step_data['type'] == 'WIN' else "lose-box"
-            st.markdown(f"<div class='analysis-box {result_class}'><h2>{step_data['text']}</h2></div>", unsafe_allow_html=True)
+            # Hộp kết quả Neon
+            res_class = "win-box" if step_data['type'] == 'WIN' else "lose-box"
+            st.markdown(f"<div class='analysis-box {res_class}'><h2>{step_data['text']}</h2></div>", unsafe_allow_html=True)
             
             if step_data['type'] == 'WIN': st.balloons()
             
-            st.metric("Score", step_data['score'])
+            st.metric("MISSION SCORE", step_data['score'])
             
+            # Lưu điểm 1 lần
             if 'saved' not in st.session_state:
                 save_score(st.session_state.player_name, scenario['title'], step_data['score'], step_data['type'])
                 st.session_state.saved = True
             
-            if st.button("Return to Dashboard", use_container_width=True):
+            if st.button("RETURN TO BASE", use_container_width=True):
                 st.session_state.current_scenario = None
                 if 'saved' in st.session_state: del st.session_state.saved
                 st.rerun()
                 
             st.divider()
-            st.subheader("Analysis")
+            st.subheader("MISSION DEBRIEF (Analysis)")
+            # Phân tích từng bước đi
             for h in st.session_state.history:
                 icon = "✅" if h['change'] > 0 else "❌"
-                color = "#D1FAE5" if h['change'] > 0 else "#FEE2E2"
-                text_col = "#065F46" if h['change'] > 0 else "#991B1B"
+                # Màu phân tích dựa trên kết quả (Xanh/Đỏ neon)
+                color = "rgba(0, 255, 127, 0.1)" if h['change'] > 0 else "rgba(255, 0, 95, 0.1)"
+                border = "#00ff7f" if h['change'] > 0 else "#ff005f"
                 st.markdown(f"""
-                <div style="background:{color}; padding:15px; border-radius:10px; margin-top:10px; color:{text_col};">
-                    <b>{icon} You chose:</b> {h['choice']}<br>
-                    <i>{h['analysis']}</i>
+                <div style="background:{color}; border-left: 4px solid {border}; padding:15px; border-radius:8px; margin-top:10px;">
+                    <b>{icon} CHOICE:</b> {h['choice']}<br>
+                    <i style="opacity:0.9;">👉 {h['analysis']}</i>
                 </div>
                 """, unsafe_allow_html=True)
 
-        else: # Playing
+        else: # Màn hình chơi (Hội thoại & Lựa chọn)
             st.subheader(scenario['title'])
-            st.image(img_url, use_container_width=True)
+            # Hiển thị ảnh động cho bước hiện tại
+            st.image(current_img_url, use_container_width=True, caption="AI Generated Scene Visualization")
             
+            # Hộp thoại Neon
             st.markdown(f"""
             <div class="chat-container">
-                <div class="customer-label">CUSTOMER SAYS:</div>
+                <div class="customer-label">🗣️ {cust['name'].upper()} SAYS:</div>
                 <div class="dialogue-text">"{step_data['text']}"</div>
             </div>
             """, unsafe_allow_html=True)
             
+            # Các nút lựa chọn Neon Gradient
             cols = st.columns(len(step_data['choices']))
             idx = 0
             for k, v in step_data['choices'].items():
                 with cols[idx]:
                     if st.button(f"{k}. {v}", use_container_width=True):
+                        # Xử lý hậu quả khi chọn
                         cons = step_data['consequences'][k]
                         st.session_state.current_step = cons['next']
+                        # Cập nhật kiên nhẫn (giới hạn 0-100)
                         st.session_state.patience = max(0, min(100, st.session_state.patience + cons['change']))
-                        st.session_state.history.append({"step": step_data['text'], "choice": v, "analysis": cons['analysis'], "change": cons['change']})
+                        # Lưu lịch sử
+                        st.session_state.history.append({
+                            "step": step_data['text'],
+                            "choice": v,
+                            "analysis": cons['analysis'],
+                            "change": cons['change']
+                        })
                         st.rerun()
                 idx += 1
 
-elif menu == "Create":
-    st.header("Scenario Builder")
-    st.info("Demo Mode")
+# --- MÀN HÌNH TẠO MỚI (DEMO) ---
+elif menu == "CREATE":
+    st.header("SCENARIO BUILDER")
+    st.info("Build custom scenarios here. AI will automatically generate images for each step!")
+    with st.form("builder"):
+        title = st.text_input("MISSION TITLE")
+        desc = st.text_area("BRIEFING")
+        if st.form_submit_button("SAVE MISSION"):
+            st.success("MISSION SAVED (Demo Mode)")
