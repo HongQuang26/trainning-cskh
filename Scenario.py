@@ -6,16 +6,17 @@ import pandas as pd
 from datetime import datetime
 import urllib.parse
 import google.generativeai as genai
+import random
 
 # ==============================================================================
 # 0. CONFIGURATION & AI ENGINE
 # ==============================================================================
-# Your API Key
+# API Key (Embedded)
 GEMINI_API_KEY = "AIzaSyD5ma9Q__JMZUs6mjBppEHUcUBpsI-wjXA"
 
 st.set_page_config(
     page_title="Service Hero Global",
-    page_icon="🌍",
+    page_icon="🌈",
     layout="wide"
 )
 
@@ -26,112 +27,134 @@ def init_ai():
     except:
         return False
 
-def generate_ai_image_url(scenario_context, default_img_url):
+def generate_dynamic_image(scenario_title, scenario_text):
     """
-    Generates a reliable image URL.
-    Strategy: Ask Gemini for just 3 simple keywords to ensure the URL never breaks.
+    Robust Image Generation Strategy:
+    1. Try to get specific artistic keywords from Gemini.
+    2. If Gemini fails/timeouts, use the Scenario Title directly.
+    3. Always returns a valid image URL, never a 'Loading' placeholder.
     """
+    prompt_keywords = ""
+    
+    # Attempt 1: Ask Gemini for a creative visual description
     try:
-        # 1. Ask Gemini for KEYWORDS only (Safe & Short)
         model = genai.GenerativeModel('gemini-1.5-flash')
-        prompt_request = f"""
-        Extract 3 simple visual keywords (nouns/adjectives) from this scene for an image generator.
-        Scene: "{scenario_context}"
-        Output format: word1 word2 word3
-        Example: angry customer restaurant
-        """
-        response = model.generate_content(prompt_request)
-        keywords = response.text.strip().replace("\n", " ").replace('"', '').replace(',', '')
-        
-        # 2. Limit length to prevent URL breakage
-        if len(keywords) > 50: keywords = "customer service situation"
-        
-        # 3. Construct Safe URL
-        encoded_prompt = urllib.parse.quote(keywords)
-        seed = int(time.time())
-        # Using Pollinations with simple keywords is 99% stable
-        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=800&height=500&seed={seed}&nologo=true&model=flux"
-        return image_url
+        # Strict prompt to get just keywords
+        response = model.generate_content(
+            f"Describe this scene in 3 visual keywords for an image generator: '{scenario_title}: {scenario_text}'. Comma separated. No intro.",
+            request_options={"timeout": 600} # Short timeout
+        )
+        if response.text:
+            prompt_keywords = response.text.strip()
     except Exception:
-        # Absolute fallback to a reliable placeholder
-        return "https://placehold.co/800x500/png?text=Scene+Loading..."
+        # Fallback: Use the title itself if AI is slow
+        prompt_keywords = scenario_title.replace(":", " ")
+
+    # Final Image URL Construction (Using Pollinations with specific seed for consistency)
+    seed = random.randint(0, 999999)
+    encoded_prompt = urllib.parse.quote(f"{prompt_keywords}, cinematic lighting, 4k, vivid colors")
+    
+    # We use 'nologo' and 'private' to ensure clean images
+    return f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=600&seed={seed}&nologo=true&model=flux"
 
 init_ai()
 
 # ==============================================================================
-# 1. HIGH CONTRAST UI STYLING (CSS)
+# 1. COLORFUL & VIBRANT UI STYLING (CSS)
 # ==============================================================================
 st.markdown("""
 <style>
-    /* FORCE LIGHT THEME & HIGH CONTRAST */
+    /* 1. ANIMATIONS & FONTS */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
+    
+    * { font-family: 'Poppins', sans-serif; }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
     .stApp {
-        background-color: #f4f6f9 !important; /* Light Grey Background */
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     }
-    
-    h1, h2, h3, p, div, span, label {
-        color: #1e293b !important; /* Dark Blue-Black Text */
-    }
-    
-    /* CARD STYLE - WHITE BACKGROUND, DARK TEXT */
+
+    /* 2. CARD STYLING (GLASSMORPHISM) */
     .scenario-card {
-        background-color: #ffffff !important;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border: 1px solid #e2e8f0;
-        margin-bottom: 15px;
-        color: #000000 !important;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 25px;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+        animation: fadeIn 0.5s ease-out;
     }
     
-    /* CHAT BUBBLES */
+    .scenario-card:hover {
+        transform: translateY(-5px) scale(1.02);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        border-left: 8px solid #FF6B6B;
+    }
+    
+    /* 3. HEADERS & TEXT */
+    h1 {
+        background: -webkit-linear-gradient(45deg, #FF6B6B, #4ECDC4);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        font-size: 3rem;
+    }
+    
+    h3 { color: #2d3436; font-weight: 700; }
+    p { color: #636e72; }
+
+    /* 4. BUTTONS (GRADIENT) */
+    .stButton button {
+        background-image: linear-gradient(to right, #6a11cb 0%, #2575fc 100%);
+        color: white !important;
+        border: none;
+        border-radius: 50px;
+        padding: 12px 30px;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(37, 117, 252, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .stButton button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(37, 117, 252, 0.5);
+    }
+    
+    /* 5. CHAT BUBBLES */
     .chat-container {
-        background-color: #ffffff !important;
-        padding: 20px;
-        border-radius: 15px;
-        border-left: 6px solid #2563eb;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        margin: 15px 0;
-        color: #000000 !important;
+        background: white;
+        border-radius: 20px;
+        padding: 25px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        border-left: 6px solid #4ECDC4;
+        animation: fadeIn 0.5s ease-out;
+        margin: 20px 0;
     }
     
-    .customer-label {
-        font-weight: bold;
-        color: #64748b !important;
-        text-transform: uppercase;
-        font-size: 0.85rem;
+    .customer-avatar {
+        width: 50px; height: 50px; border-radius: 50%;
+        border: 2px solid #4ECDC4; float: left; margin-right: 15px;
     }
     
     .dialogue-text {
-        font-size: 1.2rem;
-        font-style: italic;
-        color: #0f172a !important; /* Deep Black */
-        line-height: 1.5;
+        font-size: 1.3em; font-style: italic; color: #2d3436;
+        line-height: 1.6; padding-left: 70px;
     }
-    
-    /* BUTTONS */
-    .stButton button {
-        background-color: #3b82f6 !important;
-        color: white !important;
-        border: none;
-        font-weight: bold;
-        border-radius: 8px;
-        height: 50px;
-    }
-    .stButton button:hover {
-        background-color: #2563eb !important;
-    }
-    
-    /* ANALYSIS BOXES */
+
+    /* 6. ANALYSIS BOXES */
     .analysis-box {
-        padding: 15px; border-radius: 8px; margin-top: 10px;
-        color: #000000 !important;
+        padding: 20px; border-radius: 15px; margin-top: 15px;
+        color: white; font-weight: 500;
+        animation: fadeIn 0.3s ease-out;
     }
-    .good { background-color: #dcfce7 !important; border: 1px solid #86efac; }
-    .bad { background-color: #fee2e2 !important; border: 1px solid #fca5a5; }
-    
-    /* Hide Streamlit default menu elements for cleaner look */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
+    .good { background: linear-gradient(135deg, #11998e, #38ef7d); }
+    .bad { background: linear-gradient(135deg, #ff416c, #ff4b2b); }
     
 </style>
 """, unsafe_allow_html=True)
@@ -140,6 +163,7 @@ st.markdown("""
 # 2. FULL ENGLISH DATASET (11 SCENARIOS)
 # ==============================================================================
 INITIAL_DATA = {
+    # --- 1. F&B ---
     "SC_FNB_01": {
         "title": "F&B: Foreign Object",
         "desc": "Hair in soup. Customer is disgusted.",
@@ -166,6 +190,7 @@ INITIAL_DATA = {
             "game_over_bad": {"type": "LOSE", "title": "DISASTER", "text": "Video went viral.", "score": 0}
         }
     },
+    # --- 2. HOTEL ---
     "SC_HOTEL_01": {
         "title": "Hotel: Overbooked",
         "desc": "Honeymoon couple, no ocean view room.",
@@ -192,20 +217,7 @@ INITIAL_DATA = {
             "game_over_bad": {"type": "LOSE", "title": "WALK OUT", "text": "They left the hotel.", "score": 0}
         }
     },
-    "SC_RETAIL_01": {
-        "title": "Retail: Broken Item",
-        "desc": "VIP received broken vase.",
-        "difficulty": "Hard",
-        "customer": {"name": "Ms. Lan", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Lan", "traits": ["VIP", "Urgent"]},
-        "steps": {
-            "start": { "text": "My $500 vase arrived shattered!", "choices": {"A": "Empathy: 'Oh no! I am so sorry.'", "B": "Check: 'Order ID?'"}, "consequences": {"A": {"next": "step_2", "change": 20, "analysis": "✅ Empathy first."}, "B": {"next": "game_over_bad", "change": -20, "analysis": "⚠️ Too robotic."}} },
-            "step_2": { "text": "I need it for a gift tonight!", "choices": {"A": "Stock: 'We are out of stock.'", "B": "Check: 'Let me check other stores.'"}, "consequences": {"A": {"next": "step_3", "change": 0, "analysis": "✅ Honest but bad news."}, "B": {"next": "game_over_fail", "change": -10, "analysis": "❌ Wasting time if you don't look."}} },
-            "step_3": { "text": "Out of stock?! I'm dead!", "choices": {"A": "Refund: 'I'll refund you.'", "B": "Rescue: 'I'll express ship from warehouse by 5pm.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "😐 Problem not solved."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Solving the need."}} },
-            "game_over_good": {"type": "WIN", "title": "SAVED", "text": "Arrived in time.", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "LOST VIP", "text": "She left disappointed.", "score": 40},
-            "game_over_bad": {"type": "LOSE", "title": "RANT", "text": "Bad social media post.", "score": 0}
-        }
-    },
+    # --- 3. E-COMMERCE ---
     "SC_ECOMM_01": {
         "title": "E-comm: Lost Package",
         "desc": "App says delivered, but nothing there.",
@@ -220,6 +232,22 @@ INITIAL_DATA = {
             "game_over_bad": {"type": "LOSE", "title": "REPORTED", "text": "Marked as scam.", "score": 0}
         }
     },
+    # --- 4. RETAIL ---
+    "SC_RETAIL_01": {
+        "title": "Retail: Broken Item",
+        "desc": "VIP received broken vase.",
+        "difficulty": "Hard",
+        "customer": {"name": "Ms. Lan", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Lan", "traits": ["VIP", "Urgent"]},
+        "steps": {
+            "start": { "text": "My $500 vase arrived shattered!", "choices": {"A": "Empathy: 'Oh no! I am so sorry.'", "B": "Check: 'Order ID?'"}, "consequences": {"A": {"next": "step_2", "change": 20, "analysis": "✅ Empathy first."}, "B": {"next": "game_over_bad", "change": -20, "analysis": "⚠️ Too robotic."}} },
+            "step_2": { "text": "I need it for a gift tonight!", "choices": {"A": "Stock: 'We are out of stock.'", "B": "Check: 'Let me check other stores.'"}, "consequences": {"A": {"next": "step_3", "change": 0, "analysis": "✅ Honest but bad news."}, "B": {"next": "game_over_fail", "change": -10, "analysis": "❌ Wasting time if you don't look."}} },
+            "step_3": { "text": "Out of stock?! I'm dead!", "choices": {"A": "Refund: 'I'll refund you.'", "B": "Rescue: 'I'll express ship from warehouse by 5pm.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "😐 Problem not solved."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Solving the need."}} },
+            "game_over_good": {"type": "WIN", "title": "SAVED", "text": "Arrived in time.", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "LOST VIP", "text": "She left disappointed.", "score": 40},
+            "game_over_bad": {"type": "LOSE", "title": "RANT", "text": "Bad social media post.", "score": 0}
+        }
+    },
+    # --- 5. TECH ---
     "SC_TECH_01": {
         "title": "IT: Internet Down",
         "desc": "Meeting in progress, net cuts out.",
@@ -257,7 +285,7 @@ INITIAL_DATA = {
             "start": { "text": "Machine took my card! I need medicine money!", "choices": {"A": "Wait: 'Come Monday.'", "B": "Help: 'Card is safe. Let's withdraw.'"}, "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Dangerous."}, "B": {"next": "step_2", "change": +30, "analysis": "✅ Safety first."}} },
             "step_2": { "text": "Forgot ID.", "choices": {"A": "Rule: 'Can't help.'", "B": "Verify: 'Security questions?'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Rigid."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Adaptable."}} },
             "step_3": { "text": "Verified. How to get cash?", "choices": {"A": "Guide: 'Use the App.'", "B": "Do it: 'I will do it.'"}, "consequences": {"A": {"next": "game_over_good", "change": +40, "analysis": "🏆 Empowering."}, "B": {"next": "game_over_fail", "change": -10, "analysis": "❌ Security breach."}} },
-            "game_over_good": {"type": "WIN", "title": "SAFE", "text": "Got medicine.", "score": 100},
+            "game_over_good": {"type": "WIN", "title": "SAFE", "text": "She got medicine.", "score": 100},
             "game_over_fail": {"type": "LOSE", "title": "NO CASH", "text": "Went home empty.", "score": 30},
             "game_over_bad": {"type": "LOSE", "title": "LEFT", "text": "Switched banks.", "score": 0}
         }
@@ -366,7 +394,7 @@ ALL_SCENARIOS = load_data()
 
 # --- SIDEBAR MENU ---
 with st.sidebar:
-    st.title("🛡️ Service Hero")
+    st.title("🌈 Service Hero")
     st.markdown("### AI Training Hub")
     menu = st.radio("Navigation", ["Dashboard", "Create New"])
     
@@ -399,9 +427,9 @@ if menu == "Dashboard":
             show_leaderboard()
             
         st.write("---")
-        st.subheader("Select a Mission:")
+        st.subheader(f"Available Scenarios ({len(ALL_SCENARIOS)})")
         
-        # Scenario Grid
+        # Grid Layout for Scenarios
         cols = st.columns(2)
         idx = 0
         for key, val in ALL_SCENARIOS.items():
@@ -409,11 +437,11 @@ if menu == "Dashboard":
                 st.markdown(f"""
                 <div class="scenario-card">
                     <h3>{val['title']}</h3>
-                    <p style="color:#475569;">{val['desc']}</p>
-                    <span style="background:#e2e8f0; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;">{val['difficulty']}</span>
+                    <p style="color:#64748b;">{val['desc']}</p>
+                    <span style="background:#e0f2fe; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold; color:#0369a1;">{val['difficulty']}</span>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button(f"Start Mission ▶", key=key, use_container_width=True):
+                if st.button(f"Start Mission 🚀", key=key, use_container_width=True):
                     st.session_state.current_scenario = key
                     st.session_state.current_step = 'start'
                     st.session_state.patience = 50
@@ -432,13 +460,13 @@ if menu == "Dashboard":
         step_id = st.session_state.current_step
         step_data = scenario['steps'][step_id]
         
-        # Image Generation (Safe Mode)
+        # Image Generation (Smart Fallback)
         cache_key = f"{s_key}_{step_id}"
         if cache_key not in st.session_state.img_cache:
-            with st.spinner("🤖 AI is visualizing..."):
-                # Always provide a fallback placeholder just in case
-                fallback = "https://placehold.co/800x500/png?text=Scene+Loading..."
-                ai_url = generate_ai_image_url(f"{scenario['title']} - {step_data.get('text', '')}", fallback)
+            with st.spinner("✨ Visualizing Scene..."):
+                # Use Scenario Title + Text as context
+                context = f"{scenario['title']} {step_data.get('text', '')}"
+                ai_url = generate_dynamic_image(scenario['title'], step_data.get('text', ''))
                 st.session_state.img_cache[cache_key] = ai_url
         
         current_img = st.session_state.img_cache[cache_key]
@@ -451,11 +479,12 @@ if menu == "Dashboard":
                 st.rerun()
             
             cust = scenario['customer']
-            st.image(cust['avatar'], width=80)
+            st.image(cust['avatar'], width=100)
             st.markdown(f"**{cust['name']}**")
             
             p = st.session_state.patience
-            st.write(f"Patience: {p}%")
+            color = "green" if p > 50 else "red"
+            st.markdown(f"**Customer Patience:** :{color}[{p}%]")
             st.progress(p/100)
 
         # Game Screen
@@ -492,7 +521,7 @@ if menu == "Dashboard":
             
             st.markdown(f"""
             <div class="chat-container">
-                <div class="customer-label">Customer says:</div>
+                <div class="customer-avatar" style="background-image: url('{cust['avatar']}'); background-size: cover;"></div>
                 <div class="dialogue-text">"{step_data['text']}"</div>
             </div>
             """, unsafe_allow_html=True)
