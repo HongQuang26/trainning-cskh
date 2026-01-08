@@ -4,180 +4,152 @@ import os
 import time
 import pandas as pd
 from datetime import datetime
-import google.generativeai as genai
 import random
 
 # ==============================================================================
-# 0. CONFIGURATION & ASSETS
+# 0. CONFIGURATION
 # ==============================================================================
-GEMINI_API_KEY = "AIzaSyD5ma9Q__JMZUs6mjBppEHUcUBpsI-wjXA"
-
 st.set_page_config(
     page_title="Service Hero Academy",
     page_icon="💎",
     layout="wide"
 )
 
-# --- THƯ VIỆN ẢNH ỔN ĐỊNH (NO RATE LIMIT) ---
-# Sử dụng ảnh Unsplash chất lượng cao để đảm bảo không bao giờ bị lỗi
-IMAGE_LIBRARY = {
-    "F&B": [
-        "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1000&q=80", # Restaurant
-        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1000&q=80", # Dining
-        "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1000&q=80"  # Food
-    ],
-    "HOTEL": [
-        "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1000&q=80", # Resort
-        "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1000&q=80", # Lobby
-        "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1000&q=80"  # Bedroom
-    ],
-    "TECH": [
-        "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1000&q=80", # Work
-        "https://images.unsplash.com/photo-1531297461136-82lw9z3w9z?auto=format&fit=crop&w=1000&q=80", # Server
-        "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1000&q=80"  # Laptop
-    ],
-    "RETAIL": [
-        "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1000&q=80", # Store
-        "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?auto=format&fit=crop&w=1000&q=80", # Clothes
-        "https://images.unsplash.com/photo-1472851294608-41531b6574d4?auto=format&fit=crop&w=1000&q=80"  # Shop
-    ],
-    "TRAVEL": [
-        "https://images.unsplash.com/photo-1436491865332-7a61a14527c5?auto=format&fit=crop&w=1000&q=80", # Plane
-        "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1000&q=80", # Airport
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1000&q=80"  # Travel
-    ],
-    "BANK": [
-        "https://images.unsplash.com/photo-1601597111158-2fceff292cdc?auto=format&fit=crop&w=1000&q=80", # ATM
-        "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?auto=format&fit=crop&w=1000&q=80", # Counter
-        "https://images.unsplash.com/photo-1501167786227-4cba60f6d58f?auto=format&fit=crop&w=1000&q=80"  # Money
-    ],
-    "GENERAL": [
-        "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1000&q=80", # Meeting
-        "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1000&q=80", # Handshake
-        "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1000&q=80"  # Office
-    ]
-}
-
+# --- ROBUST IMAGE ENGINE (LOREMFLICKR) ---
+# Dùng LoremFlickr để lấy ảnh theo từ khóa. Luôn đảm bảo có ảnh.
 def get_scene_image(category, step_index):
     """
-    Selects a stable image based on category and step to ensure visual variety without errors.
+    Generates a stable image URL based on category keywords.
+    Uses 'lock' parameter to ensure the image doesn't change randomly on re-renders.
     """
-    cat_key = "GENERAL"
-    if "F&B" in category: cat_key = "F&B"
-    elif "Hotel" in category or "Spa" in category: cat_key = "HOTEL"
-    elif "IT" in category or "SaaS" in category: cat_key = "TECH"
-    elif "Retail" in category or "E-comm" in category: cat_key = "RETAIL"
-    elif "Airline" in category or "Logistics" in category: cat_key = "TRAVEL"
-    elif "Bank" in category or "Real Estate" in category: cat_key = "BANK"
+    # Map categories to reliable keywords
+    keywords_map = {
+        "F&B": "restaurant,dining,food",
+        "HOTEL": "luxury hotel,resort,room",
+        "TECH": "office,computer,meeting",
+        "RETAIL": "shopping,store,boutique",
+        "TRAVEL": "airport,airplane,travel",
+        "BANK": "bank,atm,finance",
+        "SPA": "spa,massage,skincare",
+        "REAL ESTATE": "apartment,living room,house",
+        "LOGISTICS": "delivery,warehouse,shipping",
+        "GENERAL": "business,meeting,office"
+    }
     
-    # Cycle through images based on step to simulate story progression
-    images = IMAGE_LIBRARY.get(cat_key, IMAGE_LIBRARY["GENERAL"])
-    return images[step_index % len(images)]
+    # Determine keywords based on scenario title/category
+    keywords = "business"
+    for key, val in keywords_map.items():
+        if key in category.upper():
+            keywords = val
+            break
+            
+    # Construct URL (LoremFlickr is very stable)
+    # width=800, height=500
+    # lock={step_index} ensures different steps get different images, but consistent ones.
+    return f"https://loremflickr.com/800/500/{keywords}?lock={step_index + 100}"
 
 # ==============================================================================
-# 1. VIBRANT & HIGH CONTRAST CSS
+# 1. VIBRANT UI CSS
 # ==============================================================================
 st.markdown("""
 <style>
-    /* 1. GLOBAL THEME */
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+    /* 1. GLOBAL FONTS & THEME */
+    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap');
     
     .stApp {
-        background: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);
-        font-family: 'Outfit', sans-serif;
+        background: linear-gradient(135deg, #f6f8fd 0%, #eef2f3 100%);
+        font-family: 'Manrope', sans-serif;
+        color: #1e293b;
     }
     
+    /* 2. HEADERS */
     h1 {
-        background: linear-gradient(to right, #1A2980, #26D0CE);
+        background: linear-gradient(90deg, #2563eb, #06b6d4);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 800;
-        font-size: 3rem !important;
-        text-transform: uppercase;
-        letter-spacing: 2px;
+        letter-spacing: -1px;
     }
     
-    /* 2. CARD STYLING (Glassmorphism + Pop) */
+    /* 3. CARD STYLING */
     .scenario-card {
-        background: #ffffff;
-        border-radius: 20px;
-        padding: 25px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-        border: 1px solid rgba(0,0,0,0.05);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        border: 1px solid rgba(255,255,255,0.8);
+        transition: transform 0.2s, box-shadow 0.2s;
         margin-bottom: 20px;
-        position: relative;
-        overflow: hidden;
     }
     .scenario-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 15px 35px rgba(0,0,0,0.12);
-        border-bottom: 5px solid #26D0CE;
+        transform: translateY(-5px);
+        box-shadow: 0 12px 30px rgba(37, 99, 235, 0.15);
+        border-left: 6px solid #2563eb;
     }
+    .card-title { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
+    .card-desc { font-size: 0.95rem; color: #64748b; margin-bottom: 16px; line-height: 1.5; }
     
-    .card-title { font-size: 1.4rem; font-weight: 800; color: #1e293b; margin-bottom: 5px; }
-    .card-desc { color: #64748b; font-size: 0.95rem; margin-bottom: 15px; }
-    
+    /* 4. CHAT INTERFACE */
+    .chat-container {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.06);
+        margin: 20px 0;
+        border-left: 8px solid #f59e0b; /* Amber for attention */
+    }
+    .dialogue {
+        font-size: 1.35rem;
+        font-weight: 600;
+        color: #1e293b;
+        font-style: italic;
+        margin-top: 10px;
+        line-height: 1.6;
+    }
+    .customer-label {
+        font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1.5px;
+        font-weight: 800; color: #94a3b8;
+    }
+
+    /* 5. ACTION BUTTONS (HIGH CONTRAST) */
+    .stButton button {
+        background: linear-gradient(to bottom, #1e293b, #0f172a) !important; /* Dark Blue/Black */
+        color: #fcd34d !important; /* Amber/Gold Text */
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+        padding: 18px 24px !important;
+        border-radius: 12px !important;
+        border: 1px solid #334155 !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+        width: 100%;
+    }
+    .stButton button:hover {
+        background: linear-gradient(to bottom, #334155, #1e293b) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        color: #fff !important;
+    }
+
+    /* 6. BADGES & METRICS */
     .badge {
-        display: inline-block; padding: 4px 12px; border-radius: 20px;
-        font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
-        letter-spacing: 1px;
+        padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 800;
+        text-transform: uppercase; letter-spacing: 0.5px;
     }
     .badge-hard { background: #fee2e2; color: #991b1b; }
     .badge-med { background: #fef3c7; color: #92400e; }
     
-    /* 3. CHAT BUBBLES - High Contrast */
-    .chat-box {
-        background: #ffffff;
-        border-radius: 20px;
-        padding: 30px;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
-        border-left: 8px solid #4F46E5;
-        margin: 20px 0;
-        color: #111827;
+    .analysis-box {
+        padding: 20px; border-radius: 12px; margin-top: 15px; color: white;
     }
-    .customer-name { 
-        font-size: 1rem; font-weight: 800; color: #4F46E5; 
-        text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
-    }
-    .dialogue { 
-        font-size: 1.4rem; font-weight: 600; color: #1f2937; 
-        font-style: italic; line-height: 1.5;
-    }
-    
-    /* 4. BUTTONS - EYE CATCHING */
-    .stButton button {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-        color: white !important;
-        font-size: 1.1rem !important;
-        font-weight: 700 !important;
-        border-radius: 12px !important;
-        padding: 16px 24px !important;
-        border: none !important;
-        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        width: 100%;
-    }
-    .stButton button:hover {
-        transform: translateY(-3px) scale(1.02);
-        box-shadow: 0 8px 25px rgba(37, 99, 235, 0.5);
-        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
-    }
+    .win-bg { background: linear-gradient(135deg, #10b981, #059669); }
+    .lose-bg { background: linear-gradient(135deg, #ef4444, #dc2626); }
 
-    /* 5. ANALYSIS BOXES */
-    .analysis-container {
-        padding: 20px; border-radius: 12px; margin-top: 15px;
-        color: white; font-weight: 600;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .win-box { background: linear-gradient(135deg, #059669, #10b981); }
-    .lose-box { background: linear-gradient(135deg, #dc2626, #ef4444); }
-    
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. DATASET (11 SCENARIOS)
+# 2. FULL ENGLISH DATASET (11 SCENARIOS)
 # ==============================================================================
 INITIAL_DATA = {
     "SC_FNB_01": {
@@ -251,7 +223,7 @@ INITIAL_DATA = {
         "difficulty": "Hard",
         "customer": {"name": "Evelyn", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Evelyn", "traits": ["Elderly"]},
         "steps": {
-            "start": { "text": "Card gone! Need medicine!", "choices": {"A": "Wait: 'Come Monday.'", "B": "Help: 'Card is safe.'"}, "consequences": {"A": {"next": "lose", "change": -30, "analysis": "❌ Health risk."}, "B": {"next": "step_2", "change": +30, "analysis": "✅ Care."}} },
+            "start": { "text": "Card gone! Need medicine!", "choices": {"A": "Wait: 'Come Monday.'", "B": "Help: 'Card is safe.'"}, "consequences": {"A": {"next": "lose", "change": -30, "analysis": "❌ Dangerous."}, "B": {"next": "step_2", "change": +30, "analysis": "✅ Safety first."}} },
             "step_2": { "text": "Forgot ID.", "choices": {"A": "Rule: 'Can't help.'", "B": "Verify: 'Security Qs?'"}, "consequences": {"A": {"next": "lose", "change": -20, "analysis": "⚠️ Rigid."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Adaptable."}} },
             "step_3": { "text": "Verified.", "choices": {"A": "App: 'Use App cash.'", "B": "Do it: 'I do it.'"}, "consequences": {"A": {"next": "win", "change": +40, "analysis": "🏆 Empowering."}, "B": {"next": "lose", "change": -10, "analysis": "❌ Security risk."}} },
             "win": {"type": "WIN", "title": "SAFE", "text": "Got medicine.", "score": 100},
@@ -284,19 +256,6 @@ INITIAL_DATA = {
             "lose": {"type": "LOSE", "title": "LOST", "text": "Cancelled.", "score": 0}
         }
     },
-    "SC_AIRLINE_01": {
-        "title": "Airline: Cancelled",
-        "desc": "Missing wedding.",
-        "difficulty": "Very Hard",
-        "customer": {"name": "David", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=David", "traits": ["Panic"]},
-        "steps": {
-            "start": { "text": "Cancelled?! Wedding in 6h!", "choices": {"A": "Reason: 'Weather.'", "B": "Act: 'Finding seat.'"}, "consequences": {"A": {"next": "lose", "change": -30, "analysis": "❌ Don't explain."}, "B": {"next": "step_2", "change": +30, "analysis": "✅ Act."}} },
-            "step_2": { "text": "Hurry!", "choices": {"A": "Us: 'Tomorrow.'", "B": "Partner: 'Checking partners.'"}, "consequences": {"A": {"next": "lose", "change": -20, "analysis": "⚠️ Too late."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Flexible."}} },
-            "step_3": { "text": "No flights?", "choices": {"A": "Sorry: 'Apologies.'", "B": "Creative: 'Fly + Taxi.'"}, "consequences": {"A": {"next": "lose", "change": -10, "analysis": "❌ Giving up."}, "B": {"next": "win", "change": +50, "analysis": "🏆 Hero."}} },
-            "win": {"type": "WIN", "title": "ARRIVED", "text": "In time.", "score": 100},
-            "lose": {"type": "LOSE", "title": "MISSED", "text": "Missed it.", "score": 0}
-        }
-    },
     "SC_SPA_01": {
         "title": "Spa: Allergic",
         "desc": "Face burning.",
@@ -321,6 +280,19 @@ INITIAL_DATA = {
             "step_3": { "text": "Where?", "choices": {"A": "Motel: 'Cheap.'", "B": "Hotel: '5-Star.'"}, "consequences": {"A": {"next": "lose", "change": -20, "analysis": "❌ Insult."}, "B": {"next": "win", "change": +50, "analysis": "🏆 Classy."}} },
             "win": {"type": "WIN", "title": "HAPPY", "text": "Safe.", "score": 100},
             "lose": {"type": "LOSE", "title": "SUED", "text": "Lawsuit.", "score": 0}
+        }
+    },
+    "SC_AIRLINE_01": {
+        "title": "Airline: Cancelled",
+        "desc": "Missing wedding.",
+        "difficulty": "Very Hard",
+        "customer": {"name": "David", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=David", "traits": ["Panic"]},
+        "steps": {
+            "start": { "text": "Cancelled?! Wedding in 6h!", "choices": {"A": "Reason: 'Weather.'", "B": "Act: 'Finding seat.'"}, "consequences": {"A": {"next": "lose", "change": -30, "analysis": "❌ Don't explain."}, "B": {"next": "step_2", "change": +30, "analysis": "✅ Act."}} },
+            "step_2": { "text": "Hurry!", "choices": {"A": "Us: 'Tomorrow.'", "B": "Partner: 'Checking partners.'"}, "consequences": {"A": {"next": "lose", "change": -20, "analysis": "⚠️ Too late."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Flexible."}} },
+            "step_3": { "text": "No flights?", "choices": {"A": "Sorry: 'Apologies.'", "B": "Creative: 'Fly + Taxi.'"}, "consequences": {"A": {"next": "lose", "change": -10, "analysis": "❌ Giving up."}, "B": {"next": "win", "change": +50, "analysis": "🏆 Hero."}} },
+            "win": {"type": "WIN", "title": "ARRIVED", "text": "In time.", "score": 100},
+            "lose": {"type": "LOSE", "title": "MISSED", "text": "Missed it.", "score": 0}
         }
     }
 }
@@ -357,53 +329,56 @@ def show_leaderboard():
     if os.path.exists(HISTORY_FILE):
         df = pd.read_csv(HISTORY_FILE)
         if not df.empty:
-            st.dataframe(df.sort_values(by="Score", ascending=False).head(5), use_container_width=True, hide_index=True)
+            st.dataframe(df.sort_values(by="Score", ascending=False).head(10), use_container_width=True, hide_index=True)
         else: st.info("No data yet.")
     else: st.info("No history found.")
 
 # ==============================================================================
-# 4. MAIN APPLICATION
+# 4. MAIN APP LOGIC
 # ==============================================================================
 if 'current_scenario' not in st.session_state: st.session_state.current_scenario = None
 
 ALL_SCENARIOS = load_data()
 
-# --- SIDEBAR ---
+# --- SIDEBAR MENU ---
 with st.sidebar:
-    st.title("💎 Service Hero")
-    st.markdown("### AI Academy")
-    menu = st.radio("Navigation", ["Dashboard", "Create"])
+    st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=80)
+    st.markdown("### Service Hero Academy")
+    menu = st.radio("Navigation", ["Dashboard", "Create New"])
+    
     st.divider()
-    if st.button("🔄 Reset"):
+    if st.button("🔄 Restore Original Scenarios"):
         load_data(True)
-        st.success("Reset!")
+        st.success("Restored!")
         time.sleep(1)
         st.rerun()
 
 # --- DASHBOARD ---
 if menu == "Dashboard":
     if st.session_state.current_scenario is None:
-        st.markdown("<h1>🎓 Service Hero Academy</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:1.2rem;'>Master customer service with <b>AI-Powered Roleplay</b>.</p>", unsafe_allow_html=True)
-
+        st.title("🎓 Service Hero Academy")
+        st.write("Master your skills with interactive roleplay scenarios.")
+        
+        # Player Entry
         if 'player_name' not in st.session_state: st.session_state.player_name = ""
         if not st.session_state.player_name:
-            st.info("👋 Enter your name to begin training.")
-            st.session_state.player_name = st.text_input("Agent Name:")
+            st.info("Please enter your name to start.")
+            st.session_state.player_name = st.text_input("Name:")
             if not st.session_state.player_name: st.stop()
         else:
             c1, c2 = st.columns([3, 1])
-            c1.success(f"Ready: **{st.session_state.player_name}**")
-            if c2.button("Log out"): 
+            c1.success(f"Agent: **{st.session_state.player_name}**")
+            if c2.button("Logout"): 
                 st.session_state.player_name = ""
                 st.rerun()
 
-        with st.expander("🏆 Top Agents"):
+        with st.expander("🏆 Leaderboard"):
             show_leaderboard()
+            
+        st.divider()
+        st.subheader(f"Available Missions ({len(ALL_SCENARIOS)})")
         
-        st.write("---")
-        st.subheader("Select Mission")
-        
+        # Grid Layout for Scenarios
         cols = st.columns(2)
         idx = 0
         for key, val in ALL_SCENARIOS.items():
@@ -424,8 +399,8 @@ if menu == "Dashboard":
                     st.rerun()
             idx += 1
 
+    # --- GAMEPLAY ---
     else:
-        # --- GAMEPLAY ---
         s_key = st.session_state.current_scenario
         if s_key not in ALL_SCENARIOS: 
             st.session_state.current_scenario = None
@@ -433,54 +408,74 @@ if menu == "Dashboard":
             
         scenario = ALL_SCENARIOS[s_key]
         step_id = st.session_state.current_step
-        step_data = scenario['steps'][step_id]
+        step_data = scenario['steps'].get(step_id, scenario.get(step_id)) # Handle win/lose keys
         
-        # Determine Image Category for Stable Loading
-        img_url = get_scene_image(scenario['title'], 0 if step_id == 'start' else 1)
-
-        # Sidebar Stats
+        # Robust Image Loading
+        # Step index for locking image: start=0, step_2=1, step_3=2...
+        step_idx = 0
+        if step_id == 'step_2': step_idx = 1
+        elif step_id == 'step_3': step_idx = 2
+        elif step_id in ['win', 'lose']: step_idx = 3
+        
+        img_url = get_scene_image(scenario['title'], step_idx)
+        
+        # Sidebar
         with st.sidebar:
             st.divider()
-            if st.button("❌ Abort", use_container_width=True):
+            if st.button("❌ Exit Mission", use_container_width=True):
                 st.session_state.current_scenario = None
                 st.rerun()
             
             cust = scenario['customer']
-            st.image(cust['avatar'], width=80)
+            st.image(cust['avatar'], width=100)
             st.markdown(f"**{cust['name']}**")
             
             p = st.session_state.patience
-            st.write(f"Patience: {p}%")
+            color = "green" if p > 50 else "red"
+            st.markdown(f"**Customer Patience:** :{color}[{p}%]")
             st.progress(p/100)
 
         # Game Screen
-        if "type" in step_data: # End
+        if "type" in step_data: # End Screen
             st.title(step_data['title'])
             st.image(img_url, use_container_width=True)
             
-            res_class = "win-box" if step_data['type'] == 'WIN' else "lose-box"
-            st.markdown(f"<div class='analysis-container {res_class}'><h2>{step_data['text']}</h2></div>", unsafe_allow_html=True)
+            result_class = "win-bg" if step_data['type'] == 'WIN' else "lose-bg"
+            st.markdown(f"<div class='analysis-box {result_class}'><h2>{step_data['text']}</h2></div>", unsafe_allow_html=True)
             
             if step_data['type'] == 'WIN': st.balloons()
             
-            st.metric("Score", step_data['score'])
+            st.metric("Final Score", step_data['score'])
             
             if 'saved' not in st.session_state:
                 save_score(st.session_state.player_name, scenario['title'], step_data['score'], step_data['type'])
                 st.session_state.saved = True
-            
+                
             if st.button("Return to Dashboard", use_container_width=True):
                 st.session_state.current_scenario = None
                 if 'saved' in st.session_state: del st.session_state.saved
                 st.rerun()
+                
+            st.divider()
+            st.subheader("Mission Analysis")
+            for h in st.session_state.history:
+                icon = "✅" if h['change'] > 0 else "❌"
+                color = "#dcfce7" if h['change'] > 0 else "#fee2e2"
+                text_col = "#166534" if h['change'] > 0 else "#991b1b"
+                st.markdown(f"""
+                <div style="background:{color}; padding:15px; border-radius:10px; margin-top:10px; color:{text_col}; font-weight:600;">
+                    {icon} You chose: {h['choice']}<br>
+                    <span style="font-weight:400; font-style:italic;">👉 {h['analysis']}</span>
+                </div>
+                """, unsafe_allow_html=True)
 
         else: # Playing
             st.subheader(scenario['title'])
             st.image(img_url, use_container_width=True)
             
             st.markdown(f"""
-            <div class="chat-box">
-                <div class="customer-name">🗣️ {cust['name']} says:</div>
+            <div class="chat-container">
+                <div class="customer-label">CUSTOMER SAYS:</div>
                 <div class="dialogue">"{step_data['text']}"</div>
             </div>
             """, unsafe_allow_html=True)
@@ -493,10 +488,20 @@ if menu == "Dashboard":
                         cons = step_data['consequences'][k]
                         st.session_state.current_step = cons['next']
                         st.session_state.patience = max(0, min(100, st.session_state.patience + cons['change']))
-                        st.session_state.history.append({"step": step_data['text'], "choice": v, "analysis": cons['analysis']})
+                        st.session_state.history.append({
+                            "step": step_data['text'],
+                            "choice": v,
+                            "analysis": cons['analysis'],
+                            "change": cons['change']
+                        })
                         st.rerun()
                 idx += 1
 
-elif menu == "Create":
+elif menu == "Create New":
     st.header("Scenario Builder")
-    st.info("Demo Mode")
+    st.info("Custom scenarios are supported in Demo mode.")
+    with st.form("builder"):
+        title = st.text_input("Title")
+        desc = st.text_input("Description")
+        if st.form_submit_button("Save"):
+            st.success("Saved (Demo Mode)")
