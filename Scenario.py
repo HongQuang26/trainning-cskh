@@ -25,9 +25,11 @@ st.set_page_config(
 AI_READY = False
 try:
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Thay đổi: Dùng 'gemini-pro' thay vì 'gemini-1.5-flash' để tránh lỗi 404
+    model = genai.GenerativeModel('gemini-pro')
     AI_READY = True
-except:
+except Exception as e:
+    print(f"Lỗi kết nối AI: {e}") # In lỗi ra để dễ kiểm tra nếu cần
     pass
 
 # --- KHO ẢNH DỰ PHÒNG (BACKUP LIBRARY) ---
@@ -477,3 +479,4 @@ elif menu == "PHÒNG TẬP (AI CHAT)":
                     st.session_state.roleplay_messages.append({"role": "assistant", "content": ai_reply})
                 except:
                     st.error("Lỗi kết nối AI.")
+
