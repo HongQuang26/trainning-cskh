@@ -134,7 +134,11 @@ def draw_radar_chart(player_name):
     
     fig.patch.set_facecolor('none')
     ax.set_facecolor('none')
-    ax.spines['polar'].set_color('rgba(255,255,255,0.2)')
+    
+    # SỬA LỖI VALUE ERROR TẠI ĐÂY
+    # Thay 'rgba(...)' thành tuple (1, 1, 1, 0.2)
+    ax.spines['polar'].set_color((1, 1, 1, 0.2)) 
+    
     ax.tick_params(axis='x', colors='white')
     return fig
 
