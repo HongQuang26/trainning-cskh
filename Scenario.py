@@ -30,57 +30,43 @@ except:
     pass
 
 # --- KHO ẢNH DỰ PHÒNG (BACKUP LIBRARY) ---
-# Nếu AI lỗi, hệ thống sẽ lấy ảnh từ đây. Ảnh từ Unsplash ổn định 100%.
 BACKUP_IMAGES = {
     "F&B": [
-        "https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?q=80&w=1000", # Burger/Food
-        "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1000", # Restaurant
-        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=1000"  # Dining
+        "https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?q=80&w=1000",
+        "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1000",
+        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=1000"
     ],
     "HOTEL": [
-        "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1000", # Lobby
-        "https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=1000", # Room
-        "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=1000"  # Resort
+        "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1000",
+        "https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=1000",
+        "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=1000"
     ],
     "OFFICE": [
-        "https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=1000", # Office
-        "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=1000", # Meeting
-        "https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=1000"  # Tech
+        "https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=1000",
+        "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=1000",
+        "https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=1000"
     ],
     "RETAIL": [
-        "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1000", # Store
-        "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?q=80&w=1000"  # Clothes
+        "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1000",
+        "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?q=80&w=1000"
     ],
     "GENERAL": [
-        "https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=1000" # Handshake
+        "https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=1000"
     ]
 }
 
 def get_smart_image(scenario_title, step_text, category_key="GENERAL"):
-    """
-    Hệ thống tạo ảnh thông minh 2 lớp:
-    Lớp 1: Dùng Gemini tạo Prompt -> Pollinations (Ảnh độc nhất).
-    Lớp 2: Nếu lỗi -> Dùng ảnh Backup từ Unsplash (Ảnh an toàn).
-    """
-    # 1. Cố gắng dùng AI tạo ảnh mới
     if AI_READY:
         try:
-            # Hỏi Gemini keyword
             prompt_req = f"Extract 3 visual keywords (english nouns) for stock photo: '{scenario_title} - {step_text}'. Comma separated. No intro."
             res = model.generate_content(prompt_req, request_options={"timeout": 3})
             keywords = res.text.strip().replace("\n", "")
-            
-            # Tạo URL (Dùng seed để ảnh cố định cho bước này, tránh nhấp nháy)
             seed = hash(step_text) % 10000
             encoded = urllib.parse.quote(f"{keywords}, highly detailed, cinematic lighting")
-            # Dùng model flux để ảnh đẹp hơn
             return f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=600&seed={seed}&nologo=true&model=flux"
         except:
-            pass # Nếu lỗi thì xuống Lớp 2
-    
-    # 2. Lớp dự phòng (Backup)
+            pass
     images = BACKUP_IMAGES.get(category_key, BACKUP_IMAGES["GENERAL"])
-    # Chọn ảnh dựa trên độ dài văn bản để nó có vẻ "ngẫu nhiên" nhưng cố định
     idx = len(step_text) % len(images)
     return images[idx]
 
@@ -92,7 +78,6 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
     * { font-family: 'Outfit', sans-serif !important; }
 
-    /* NỀN TỐI HIỆN ĐẠI */
     .stApp {
         background: radial-gradient(circle at 10% 20%, rgb(20, 20, 35) 0%, rgb(40, 40, 60) 90%);
         color: #fff;
@@ -102,7 +87,6 @@ st.markdown("""
         border-right: 1px solid rgba(255,255,255,0.1);
     }
 
-    /* CARD KỊCH BẢN */
     .scenario-card {
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -122,7 +106,6 @@ st.markdown("""
         border-bottom: 1px solid rgba(255,255,255,0.1);
     }
     
-    /* CHAT BOX */
     .chat-container {
         background: rgba(0, 0, 0, 0.3);
         border-left: 5px solid #FDBB2D;
@@ -134,7 +117,6 @@ st.markdown("""
     .customer-label { color: #FDBB2D; font-size: 0.9rem; font-weight: bold; letter-spacing: 1px; }
     .dialogue { font-size: 1.4rem; font-style: italic; color: #fff; line-height: 1.5; margin-top: 5px;}
 
-    /* BUTTONS */
     .stButton button {
         background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
         color: #fff !important;
@@ -151,18 +133,32 @@ st.markdown("""
         border: none;
     }
     
-    /* TEXT */
     h1 {
         background: linear-gradient(to right, #00c6ff, #0072ff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 900; letter-spacing: 1px;
     }
+    
+    /* FIX LAYOUT SPACING */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 5rem;
+    }
+    
+    /* LOGIN BOX */
+    .login-box {
+        background: rgba(255,255,255,0.1);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. DỮ LIỆU KỊCH BẢN (11 SCENARIOS) - ĐÃ CÓ ẢNH BÌA CỐ ĐỊNH (COVER)
+# 2. DỮ LIỆU KỊCH BẢN (11 SCENARIOS)
 # ==============================================================================
 INITIAL_DATA = {
     "SC_FNB": {
@@ -185,7 +181,7 @@ INITIAL_DATA = {
     },
     "SC_TECH": { "title": "IT: Net Down", "desc": "Meeting interrupted.", "difficulty": "MEDIUM", "category": "OFFICE", "cover": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=800",
         "customer": {"name": "Ken", "traits": ["Urgent"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Ken"}, 
-        "steps": { "start": {"text":"Net down!","choices":{"A":"Restart","B":"Check"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FIXED", "text":"Online.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Churn.", "score":0} } },
+        "steps": { "start": {"text":"Net down!","choices":{"A":"Restart","B":"Check"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FIXED", "text":"Online again.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Churn.", "score":0} } },
     
     "SC_RETAIL": { "title": "Retail: Broken", "desc": "Vase arrived broken.", "difficulty": "HARD", "category": "RETAIL", "cover": "https://images.unsplash.com/photo-1596496050844-461dc5b7263f?q=80&w=800",
         "customer": {"name": "Lan", "traits": ["VIP"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Lan"}, 
@@ -224,9 +220,32 @@ DB_FILE = "scenarios.json"
 HISTORY_FILE = "score_history.csv"
 
 # ==============================================================================
-# 4. APP LOGIC
+# 3. UTILS (XỬ LÝ DỮ LIỆU)
 # ==============================================================================
-def load_data(): return INITIAL_DATA
+def load_data(force_reset=False):
+    if force_reset or not os.path.exists(DB_FILE):
+        with open(DB_FILE, 'w', encoding='utf-8') as f:
+            json.dump(INITIAL_DATA, f, indent=4)
+        return INITIAL_DATA.copy()
+    try:
+        with open(DB_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # Merge Missing Fields
+        for k, v in INITIAL_DATA.items():
+            if k not in data:
+                data[k] = v
+            else:
+                if 'cover' not in data[k]: data[k]['cover'] = v['cover']
+                if 'category' not in data[k]: data[k]['category'] = v.get('category', 'GENERAL')
+                if 'customer' in data[k] and 'avatar' not in data[k]['customer']:
+                    data[k]['customer']['avatar'] = v['customer']['avatar']
+        return data
+    except: return load_data(True)
+
+def save_data(data):
+    with open(DB_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4)
 
 def save_score(player, scenario, score, outcome):
     new_row = {"Time": datetime.now().strftime("%Y-%m-%d %H:%M"), "Player": player, "Scenario": scenario, "Score": score, "Outcome": outcome}
@@ -243,11 +262,42 @@ def show_leaderboard():
         if not df.empty:
             st.dataframe(df.sort_values(by="Score", ascending=False).head(10), use_container_width=True, hide_index=True)
         else: st.info("No data yet.")
-    else: st.info("No history.")
+    else: st.info("No history found.")
+
+# AI CHATBOT FUNCTION
+def get_ai_chat_response(messages, context):
+    """
+    Hàm xử lý chat tự do với AI đóng vai khách hàng.
+    """
+    if not AI_READY: return "AI System Offline."
+    
+    system_prompt = f"""
+    You are roleplaying as a customer named {context['name']} in a {context['title']} scenario.
+    Description: {context['desc']}
+    Your traits: {', '.join(context['traits'])}.
+    
+    Be concise, act like a real person (emotional, maybe angry or happy depending on user input).
+    Do NOT act like an AI assistant. ACT LIKE THE CUSTOMER.
+    """
+    
+    try:
+        # Convert history to Gemini format
+        history = [{"role": "user", "parts": [system_prompt]}]
+        for msg in messages:
+            role = "model" if msg["role"] == "assistant" else "user"
+            history.append({"role": role, "parts": [msg["content"]]})
+            
+        model_chat = genai.GenerativeModel('gemini-1.5-flash')
+        response = model_chat.generate_content(history)
+        return response.text
+    except Exception as e:
+        return f"Connection error: {e}"
 
 # SESSION STATE
 if 'current_scenario' not in st.session_state: st.session_state.current_scenario = None
 if 'step_img_cache' not in st.session_state: st.session_state.step_img_cache = {}
+if 'chat_history' not in st.session_state: st.session_state.chat_history = []
+if 'chat_context' not in st.session_state: st.session_state.chat_context = None
 
 ALL_SCENARIOS = load_data()
 
@@ -255,41 +305,48 @@ ALL_SCENARIOS = load_data()
 with st.sidebar:
     st.title("⚡ SERVICE HERO")
     st.caption("AI Core: Online")
-    menu = st.radio("NAVIGATION", ["DASHBOARD", "CREATE"])
+    menu = st.radio("NAVIGATION", ["DASHBOARD", "CREATE", "AI ROLEPLAY"])
     st.divider()
     if st.button("🔄 REFRESH SYSTEM"):
         st.session_state.step_img_cache = {}
         st.rerun()
 
-# --- DASHBOARD ---
+# --- 1. DASHBOARD ---
 if menu == "DASHBOARD":
     if st.session_state.current_scenario is None:
         st.markdown("# 🚀 MISSION CONTROL")
         
-        if 'player_name' not in st.session_state: st.session_state.player_name = ""
-        if not st.session_state.player_name:
-            st.info("Identify yourself to access the system.")
-            st.session_state.player_name = st.text_input("CODENAME:")
-            if not st.session_state.player_name: st.stop()
-        else:
-            c1, c2 = st.columns([3, 1])
-            c1.success(f"AGENT ONLINE: **{st.session_state.player_name}**")
-            if c2.button("LOGOUT"): 
-                st.session_state.player_name = ""
-                st.rerun()
+        # --- FIX: LOGIN SECTION IN SEPARATE CONTAINER ---
+        with st.container(border=True):
+            st.markdown("### 👤 AGENT IDENTIFICATION")
+            if 'player_name' not in st.session_state: st.session_state.player_name = ""
+            
+            if not st.session_state.player_name:
+                st.info("Please enter your name to unlock the system.")
+                st.session_state.player_name = st.text_input("CODENAME:", key="login_input")
+                if not st.session_state.player_name: st.stop()
+            else:
+                c1, c2 = st.columns([3, 1])
+                c1.success(f"ONLINE: **{st.session_state.player_name}**")
+                if c2.button("LOGOUT"): 
+                    st.session_state.player_name = ""
+                    st.rerun()
 
-        with st.expander("🏆 ELITE AGENTS"):
+        st.write("") # Spacer
+
+        # --- LEADERBOARD ---
+        with st.expander("🏆 ELITE AGENTS (LEADERBOARD)"):
             show_leaderboard()
             
         st.divider()
         st.subheader("ACTIVE MISSIONS")
         
+        # --- SCENARIO GRID ---
         cols = st.columns(2)
         idx = 0
         for key, val in ALL_SCENARIOS.items():
             with cols[idx % 2]:
-                # ẢNH BÌA CỐ ĐỊNH -> KHÔNG BAO GIỜ LỖI
-                img_src = val['cover']
+                img_src = val.get('cover', 'https://images.unsplash.com/photo-1557426272-fc759fdf7a8d?q=80&w=800')
                 
                 st.markdown(f"""
                 <div class="scenario-card">
@@ -322,16 +379,13 @@ if menu == "DASHBOARD":
         step_id = st.session_state.current_step
         step_data = scenario['steps'].get(step_id, scenario.get(step_id))
         
-        # --- TẠO ẢNH BƯỚC ĐI (SMART IMAGE) ---
         cache_key = f"{s_key}_{step_id}"
         if cache_key not in st.session_state.step_img_cache:
-            # Tạo ảnh mới: Gemini -> Keyword -> Ảnh
-            # Dùng loại kịch bản để chọn kho ảnh dự phòng phù hợp
-            st.session_state.step_img_cache[cache_key] = get_smart_image(scenario['title'], step_data.get('text', ''), scenario.get('category', 'GENERAL'))
+            cat = scenario.get('category', 'GENERAL')
+            st.session_state.step_img_cache[cache_key] = get_smart_image(scenario['title'], step_data.get('text', ''), cat)
         
         current_img = st.session_state.step_img_cache[cache_key]
         
-        # Sidebar
         with st.sidebar:
             st.divider()
             if st.button("❌ ABORT", use_container_width=True):
@@ -339,23 +393,18 @@ if menu == "DASHBOARD":
                 st.rerun()
             
             cust = scenario['customer']
-            st.image(cust['avatar'], width=80)
+            avatar = cust.get('avatar', f"https://api.dicebear.com/7.x/avataaars/svg?seed={cust['name']}")
+            st.image(avatar, width=80)
             st.markdown(f"**TARGET: {cust['name']}**")
             p = st.session_state.patience
             st.markdown(f"**PATIENCE:** {p}%")
             st.progress(p/100)
 
-        # Game UI
-        if "type" in step_data: # End
+        if "type" in step_data: 
             st.title(step_data['title'])
             st.image(current_img, use_container_width=True)
-            
             color = "#00ff7f" if step_data['type'] == 'WIN' else "#ff005f"
-            st.markdown(f"""
-            <div style="border:2px solid {color}; padding:20px; border-radius:15px; color:{color}; text-align:center; background:rgba(0,0,0,0.3);">
-                <h2>{step_data['text']}</h2>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"<div style='border:2px solid {color}; padding:20px; border-radius:15px; color:{color}; text-align:center;'><h2>{step_data['text']}</h2></div>", unsafe_allow_html=True)
             
             if step_data['type'] == 'WIN': st.balloons()
             st.metric("SCORE", step_data['score'])
@@ -369,17 +418,10 @@ if menu == "DASHBOARD":
                 if 'saved' in st.session_state: del st.session_state.saved
                 st.rerun()
 
-        else: # Playing
+        else:
             st.subheader(scenario['title'])
             st.image(current_img, use_container_width=True)
-            
-            st.markdown(f"""
-            <div class="chat-container">
-                <div class="customer-label">{cust['name'].upper()} SAYS:</div>
-                <div class="dialogue">"{step_data['text']}"</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
+            st.markdown(f"<div class='chat-container'><div class='customer-label'>{cust['name'].upper()} SAYS:</div><div class='dialogue'>\"{step_data['text']}\"</div></div>", unsafe_allow_html=True)
             cols = st.columns(len(step_data['choices']))
             idx = 0
             for k, v in step_data['choices'].items():
@@ -392,6 +434,93 @@ if menu == "DASHBOARD":
                         st.rerun()
                 idx += 1
 
+# --- 2. CREATE SCENARIO (FIXED) ---
 elif menu == "CREATE":
-    st.header("BUILDER")
-    st.info("Demo Mode")
+    st.header("🛠️ BUILDER")
+    st.info("Design your own training scenario.")
+    
+    with st.form("create_form"):
+        c1, c2 = st.columns(2)
+        title = c1.text_input("Title", placeholder="e.g., Angry Boss")
+        category = c2.selectbox("Category", ["OFFICE", "RETAIL", "F&B", "HOTEL", "TECH"])
+        desc = st.text_area("Description", placeholder="Brief context...")
+        cust_name = st.text_input("Customer Name", placeholder="Mr. John")
+        start_text = st.text_area("Opening Line (What does customer say?)", placeholder="Where is my report?!")
+        
+        st.markdown("### Choices")
+        c3, c4 = st.columns(2)
+        opt_a = c3.text_input("Choice A (Bad)", placeholder="It's not done.")
+        opt_b = c4.text_input("Choice B (Good)", placeholder="I am finishing it now.")
+        
+        if st.form_submit_button("SAVE SCENARIO"):
+            if title and start_text:
+                new_id = f"SC_CUSTOM_{int(time.time())}"
+                new_scen = {
+                    "title": title, "desc": desc, "difficulty": "CUSTOM", "category": category,
+                    "cover": "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=800",
+                    "customer": {"name": cust_name, "traits": ["Custom"], "avatar": f"https://api.dicebear.com/7.x/avataaars/svg?seed={cust_name}"},
+                    "steps": {
+                        "start": {
+                            "text": start_text,
+                            "choices": {"A": opt_a, "B": opt_b},
+                            "consequences": {
+                                "A": {"next": "lose", "change": -20, "analysis": "Poor choice."},
+                                "B": {"next": "win", "change": 20, "analysis": "Good choice."}
+                            }
+                        },
+                        "win": {"type": "WIN", "title": "SUCCESS", "text": "Customer is satisfied.", "score": 100},
+                        "lose": {"type": "LOSE", "title": "FAIL", "text": "Customer left.", "score": 0}
+                    }
+                }
+                ALL_SCENARIOS[new_id] = new_scen
+                save_data(ALL_SCENARIOS)
+                st.success("Scenario Created Successfully!")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("Please fill in Title and Opening Line.")
+
+# --- 3. AI ROLEPLAY (NEW FEATURE) ---
+elif menu == "AI ROLEPLAY":
+    st.header("🤖 FREE ROLEPLAY MODE")
+    st.info("Chat freely with an AI Customer. Test your soft skills without predefined choices.")
+    
+    # Select Context
+    scenario_list = {k: v['title'] for k, v in ALL_SCENARIOS.items()}
+    selected_scen_key = st.selectbox("Choose a Scenario Context:", list(scenario_list.keys()), format_func=lambda x: scenario_list[x])
+    
+    if st.button("START NEW CHAT"):
+        st.session_state.chat_context = ALL_SCENARIOS[selected_scen_key]
+        st.session_state.chat_history = []
+        # Initial greeting from customer
+        init_msg = ALL_SCENARIOS[selected_scen_key]['steps']['start']['text']
+        st.session_state.chat_history.append({"role": "assistant", "content": init_msg})
+        st.rerun()
+        
+    st.divider()
+    
+    # Display Chat
+    if st.session_state.chat_context:
+        ctx = st.session_state.chat_context
+        st.markdown(f"**Interacting with:** {ctx['customer']['name']} ({ctx['title']})")
+        
+        for msg in st.session_state.chat_history:
+            avatar = "🧑‍💻" if msg["role"] == "user" else "👤"
+            with st.chat_message(msg["role"], avatar=avatar):
+                st.write(msg["content"])
+                
+        # Input
+        if prompt := st.chat_input("Type your response..."):
+            # Add user message
+            st.session_state.chat_history.append({"role": "user", "content": prompt})
+            with st.chat_message("user", avatar="🧑‍💻"):
+                st.write(prompt)
+                
+            # Get AI response
+            with st.spinner("Customer is typing..."):
+                ai_reply = get_ai_chat_response(st.session_state.chat_history, ctx)
+                
+            # Add AI message
+            st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
+            with st.chat_message("assistant", avatar="👤"):
+                st.write(ai_reply)
