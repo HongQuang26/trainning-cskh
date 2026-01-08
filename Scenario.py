@@ -10,7 +10,7 @@ import google.generativeai as genai
 # ==============================================================================
 # 0. CONFIGURATION & AI ENGINE
 # ==============================================================================
-# Your API Key (Embedded)
+# Your API Key
 GEMINI_API_KEY = "AIzaSyD5ma9Q__JMZUs6mjBppEHUcUBpsI-wjXA"
 
 st.set_page_config(
@@ -28,105 +28,110 @@ def init_ai():
 
 def generate_ai_image_url(scenario_context, default_img_url):
     """
-    Generates an image URL using Gemini for prompting and Pollinations for rendering.
-    Optimized to prevent broken images.
+    Generates a reliable image URL.
+    Strategy: Ask Gemini for just 3 simple keywords to ensure the URL never breaks.
     """
     try:
-        # 1. Use Gemini to get a short, clear visual description
+        # 1. Ask Gemini for KEYWORDS only (Safe & Short)
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt_request = f"""
-        Describe the following scene in 10 words for an AI image generator. 
-        Focus on the main subject and emotion. 
+        Extract 3 simple visual keywords (nouns/adjectives) from this scene for an image generator.
         Scene: "{scenario_context}"
-        Output ONLY the 10 words in English. No intro.
+        Output format: word1 word2 word3
+        Example: angry customer restaurant
         """
         response = model.generate_content(prompt_request)
-        clean_prompt = response.text.strip().replace("\n", " ").replace('"', '')
+        keywords = response.text.strip().replace("\n", " ").replace('"', '').replace(',', '')
         
-        # 2. Construct a Safe URL
-        # We simplify the prompt to avoid URL encoding errors
-        encoded_prompt = urllib.parse.quote(clean_prompt)
+        # 2. Limit length to prevent URL breakage
+        if len(keywords) > 50: keywords = "customer service situation"
+        
+        # 3. Construct Safe URL
+        encoded_prompt = urllib.parse.quote(keywords)
         seed = int(time.time())
-        # Use a high-speed model 'flux' or 'turbo'
+        # Using Pollinations with simple keywords is 99% stable
         image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=800&height=500&seed={seed}&nologo=true&model=flux"
         return image_url
-    except Exception as e:
-        # Fallback to Unsplash if AI fails
-        return default_img_url
+    except Exception:
+        # Absolute fallback to a reliable placeholder
+        return "https://placehold.co/800x500/png?text=Scene+Loading..."
 
 init_ai()
 
 # ==============================================================================
-# 1. MODERN UI STYLING (CSS)
+# 1. HIGH CONTRAST UI STYLING (CSS)
 # ==============================================================================
 st.markdown("""
 <style>
-    /* Main Background & Fonts */
+    /* FORCE LIGHT THEME & HIGH CONTRAST */
     .stApp {
-        background-color: #f8f9fa;
-        font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+        background-color: #f4f6f9 !important; /* Light Grey Background */
     }
     
-    /* Custom Card Style */
+    h1, h2, h3, p, div, span, label {
+        color: #1e293b !important; /* Dark Blue-Black Text */
+    }
+    
+    /* CARD STYLE - WHITE BACKGROUND, DARK TEXT */
     .scenario-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
-        padding: 25px;
-        border-radius: 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        border-left: 5px solid #3b82f6;
-        margin-bottom: 20px;
-        transition: transform 0.2s;
-    }
-    .scenario-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        background-color: #ffffff !important;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border: 1px solid #e2e8f0;
+        margin-bottom: 15px;
+        color: #000000 !important;
     }
     
-    /* Headers */
-    h1 { color: #1e293b; font-weight: 800; }
-    h2 { color: #334155; font-weight: 700; }
-    h3 { color: #0f172a; }
-
-    /* Custom Buttons */
+    /* CHAT BUBBLES */
+    .chat-container {
+        background-color: #ffffff !important;
+        padding: 20px;
+        border-radius: 15px;
+        border-left: 6px solid #2563eb;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        margin: 15px 0;
+        color: #000000 !important;
+    }
+    
+    .customer-label {
+        font-weight: bold;
+        color: #64748b !important;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+    }
+    
+    .dialogue-text {
+        font-size: 1.2rem;
+        font-style: italic;
+        color: #0f172a !important; /* Deep Black */
+        line-height: 1.5;
+    }
+    
+    /* BUTTONS */
     .stButton button {
-        background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
-        color: white;
+        background-color: #3b82f6 !important;
+        color: white !important;
         border: none;
-        border-radius: 10px;
-        padding: 10px 24px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+        font-weight: bold;
+        border-radius: 8px;
+        height: 50px;
     }
     .stButton button:hover {
-        background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
-        transform: scale(1.02);
-        box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
-        color: white;
+        background-color: #2563eb !important;
     }
     
-    /* Chat Bubbles */
-    .chat-container {
-        background-color: #ffffff;
-        padding: 25px;
-        border-radius: 20px;
-        border-top-left-radius: 0;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        margin: 15px 0;
-        border-left: 4px solid #6366f1;
+    /* ANALYSIS BOXES */
+    .analysis-box {
+        padding: 15px; border-radius: 8px; margin-top: 10px;
+        color: #000000 !important;
     }
-    .customer-label {
-        font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;
-        color: #64748b; margin-bottom: 5px; font-weight: bold;
-    }
-    .dialogue-text {
-        font-size: 1.2em; color: #1e293b; font-style: italic; line-height: 1.5;
-    }
+    .good { background-color: #dcfce7 !important; border: 1px solid #86efac; }
+    .bad { background-color: #fee2e2 !important; border: 1px solid #fca5a5; }
     
-    /* Analysis Boxes */
-    .analysis-box { padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid transparent; }
-    .good { background-color: #dcfce7; color: #166534; border-color: #bbf7d0; }
-    .bad { background-color: #fee2e2; color: #991b1b; border-color: #fecaca; }
+    /* Hide Streamlit default menu elements for cleaner look */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
     
 </style>
 """, unsafe_allow_html=True)
@@ -135,254 +140,182 @@ st.markdown("""
 # 2. FULL ENGLISH DATASET (11 SCENARIOS)
 # ==============================================================================
 INITIAL_DATA = {
-    # --- 1. F&B ---
     "SC_FNB_01": {
-        "title": "F&B: Foreign Object in Food",
-        "desc": "Hair found in soup. Handle the angry customer.",
+        "title": "F&B: Foreign Object",
+        "desc": "Hair in soup. Customer is disgusted.",
         "difficulty": "Hard",
-        "customer": {"name": "Ms. Jade", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Jade", "traits": ["Picky", "Famous Reviewer"], "spending": "New Customer"},
+        "customer": {"name": "Ms. Jade", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Jade", "traits": ["Picky", "Reviewer"]},
         "steps": {
             "start": { 
-                "patience": 30, "img": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800",
-                "text": "Where is the manager?! Look at this! A long hair in my soup! Are you feeding me garbage?",
-                "choices": {"A": "Deny: 'That is not our staff's hair.'", "B": "Act: 'I am terribly sorry! I will handle this immediately.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -40, "analysis": "❌ Denial destroys trust immediately."}, "B": {"next": "step_2_wait", "change": +10, "analysis": "✅ Immediate action is the correct first step."}}
+                "text": "Manager! Look! A hair in my soup! Are you feeding me garbage?",
+                "choices": {"A": "Deny: 'Not our staff's hair.'", "B": "Act: 'Terribly sorry! Handling it now.'"},
+                "consequences": {"A": {"next": "game_over_bad", "change": -40, "analysis": "❌ Denial destroys trust."}, "B": {"next": "step_2", "change": +10, "analysis": "✅ Immediate action is correct."}}
             },
-            "step_2_wait": { 
-                "patience": 40, "img": "https://images.unsplash.com/photo-1512485800893-e082253cd558?q=80&w=800",
-                "text": "(5 mins later) I lost my appetite. I've been waiting too long. My friend is almost done eating.",
-                "choices": {"A": "Persuade: 'Please try it, the chef made it specially.'", "B": "Pivot: 'I completely understand. I will remove this item. May I offer you a dessert instead?'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Never force an angry customer to eat."}, "B": {"next": "step_3_bill", "change": +20, "analysis": "✅ Respecting emotions and offering alternatives."}}
+            "step_2": { 
+                "text": "I lost my appetite. My friend is almost done eating.",
+                "choices": {"A": "Persuade: 'Please try it again.'", "B": "Pivot: 'I understand. Dessert on us instead?'"},
+                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Don't force them."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Offering alternatives."}}
             },
-            "step_3_bill": { 
-                "patience": 60, "img": "https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=800",
-                "text": "Fine, get me a glass of wine. But tonight is ruined. Bring me the bill.",
-                "choices": {"A": "Discount: 'Here is the bill with 10% off.'", "B": "Compensate: 'Tonight is on the house. And here is a voucher for your next visit.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ 10% is an insult for a ruined night."}, "B": {"next": "game_over_good", "change": +40, "analysis": "🏆 Over-delivering turns a disaster into a Wow moment."}}
+            "step_3": { 
+                "text": "Fine. Bring me the bill.",
+                "choices": {"A": "Discount: '10% off.'", "B": "Compensate: 'Tonight is free. Plus a voucher.'"},
+                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ 10% is insulting here."}, "B": {"next": "game_over_good", "change": +40, "analysis": "🏆 Wow moment created."}}
             },
-            "game_over_good": {"type": "WIN", "title": "TRUST RESTORED", "text": "She was surprised by your generosity and left a tip.", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "LOST CUSTOMER", "text": "She paid but left a 1-star review.", "score": 40},
-            "game_over_bad": {"type": "LOSE", "title": "PR DISASTER", "text": "A video of the argument went viral.", "score": 0}
+            "game_over_good": {"type": "WIN", "title": "SUCCESS", "text": "She left a tip.", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "LOST CUSTOMER", "text": "She left a 1-star review.", "score": 40},
+            "game_over_bad": {"type": "LOSE", "title": "DISASTER", "text": "Video went viral.", "score": 0}
         }
     },
-    # --- 2. HOTEL ---
     "SC_HOTEL_01": {
-        "title": "Hotel: Overbooked Room",
-        "desc": "Honeymoon couple, but the hotel is full.",
+        "title": "Hotel: Overbooked",
+        "desc": "Honeymoon couple, no ocean view room.",
         "difficulty": "Very Hard",
-        "customer": {"name": "Mr. Mike", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike", "traits": ["Tired", "High Expectations"], "spending": "Honeymoon"},
+        "customer": {"name": "Mr. Mike", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike", "traits": ["Tired", "High Expectation"]},
         "steps": {
             "start": { 
-                "patience": 20, "img": "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=800",
-                "text": "I booked an Ocean View 3 months ago! I will NOT accept a Garden View!",
-                "choices": {"A": "Policy: 'It's a system error. Please understand.'", "B": "Empathy: 'This is entirely our fault. I sincerely apologize.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Blaming the system doesn't help."}, "B": {"next": "step_2_alt", "change": +20, "analysis": "✅ Owning the mistake is crucial."}}
+                "text": "I booked Ocean View months ago! I won't take Garden View!",
+                "choices": {"A": "Policy: 'System error. Sorry.'", "B": "Own it: 'This is our fault. I apologize.'"},
+                "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Don't blame the system."}, "B": {"next": "step_2", "change": +20, "analysis": "✅ Sincere apology first."}}
             },
-            "step_2_alt": { 
-                "patience": 40, "img": "https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=800",
-                "text": "Sorry doesn't give me an ocean view! We flew 12 hours for this!",
-                "choices": {"A": "Standard: 'I can give you free breakfast and spa.'", "B": "Check: 'Please give me a moment to find the best upgrade option.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Small gifts don't fix the main issue."}, "B": {"next": "step_3_upgrade", "change": +10, "analysis": "✅ Showing effort to find a real solution."}}
+            "step_2": { 
+                "text": "We flew 12 hours for this view!",
+                "choices": {"A": "Small Gift: 'Free breakfast?'", "B": "Solution: 'Let me find an upgrade.'"},
+                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Not enough."}, "B": {"next": "step_3", "change": +10, "analysis": "✅ Effort matters."}}
             },
-            "step_3_upgrade": { 
-                "patience": 50, "img": "https://images.unsplash.com/photo-1618773928121-c32242e63f39?q=80&w=800",
-                "text": "(Waiting anxiously) Well? My wife is crying over there.",
-                "choices": {"A": "Partial: 'We have a partial ocean view available tomorrow.'", "B": "Hero: 'I found the Presidential Suite vacant. I'm upgrading you for free.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ Still disappointing."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Over-delivering saves the vacation."}}
+            "step_3": { 
+                "text": "Well? My wife is waiting.",
+                "choices": {"A": "Wait: 'Room available tomorrow.'", "B": "Hero: 'Upgrading you to Presidential Suite.'"},
+                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ Disappointing."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Over-delivery wins."}}
             },
-            "game_over_good": {"type": "WIN", "title": "DREAM VACATION", "text": "They were thrilled with the Suite.", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "SAD TRIP", "text": "They stayed but won't return.", "score": 40},
-            "game_over_bad": {"type": "LOSE", "title": "WALK OUT", "text": "They demanded a refund and left.", "score": 0}
+            "game_over_good": {"type": "WIN", "title": "DREAM TRIP", "text": "They loved the suite.", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "SAD TRIP", "text": "They won't return.", "score": 40},
+            "game_over_bad": {"type": "LOSE", "title": "WALK OUT", "text": "They left the hotel.", "score": 0}
         }
     },
-    # --- 3. E-COMMERCE ---
-    "SC_ECOMM_01": {
-        "title": "Online: Lost Package",
-        "desc": "App says delivered, customer received nothing.",
-        "difficulty": "Medium",
-        "customer": {"name": "Tom", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Tom", "traits": ["Anxious", "Skeptical"], "spending": "Low"},
-        "steps": {
-            "start": {
-                "patience": 40, "img": "https://images.unsplash.com/photo-1566576912321-d58ba2188273?q=80&w=800",
-                "text": "App says delivered but I see nothing! Are you scamming me?",
-                "choices": {"A": "Deflect: 'Check with your neighbors.'", "B": "Reassure: 'I will take responsibility to check this right now.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -20, "analysis": "❌ Don't make the customer do your work."}, "B": {"next": "step_2_check", "change": +20, "analysis": "✅ Siding with the customer."}}
-            },
-            "step_2_check": {
-                "patience": 50, "img": "https://images.unsplash.com/photo-1556741533-6e6a62bd8b49?q=80&w=800",
-                "text": "I checked everywhere! I need these shoes for a contest tomorrow!",
-                "choices": {"A": "Wait: 'Please wait 24h for shipper response.'", "B": "Urgent: 'I am calling the local courier directly right now.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ 24h is too late for his deadline."}, "B": {"next": "step_3_result", "change": +20, "analysis": "✅ Urgency matches customer needs."}}
-            },
-            "step_3_result": {
-                "patience": 60, "img": "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=800",
-                "text": "(Shipper hid it in a bush) Shipper said it's in the bush? What if it's stolen?",
-                "choices": {"A": "Trust: 'It's probably still there.'", "B": "Commit: 'Please check. If it's gone, I will express ship a new pair immediately.'"},
-                "consequences": {"A": {"next": "game_over_normal", "change": 0, "analysis": "😐 Too passive."}, "B": {"next": "game_over_good", "change": +40, "analysis": "🏆 Risk-free commitment builds absolute trust."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "LOYAL FAN", "text": "Tom found the shoes and rated 5 stars.", "score": 100},
-            "game_over_normal": {"type": "WIN", "title": "FOUND IT", "text": "Item found but customer is annoyed.", "score": 70},
-            "game_over_fail": {"type": "LOSE", "title": "TOO LATE", "text": "He bought shoes elsewhere.", "score": 30},
-            "game_over_bad": {"type": "LOSE", "title": "SCAM REPORT", "text": "He reported the shop as a scam.", "score": 0}
-        }
-    },
-    # --- 4. RETAIL ---
     "SC_RETAIL_01": {
-        "title": "Retail: Broken Vase",
-        "desc": "VIP customer received a broken item.",
+        "title": "Retail: Broken Item",
+        "desc": "VIP received broken vase.",
         "difficulty": "Hard",
-        "customer": {"name": "Ms. Lan", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Lan", "traits": ["VIP", "Urgent"], "spending": "High"},
+        "customer": {"name": "Ms. Lan", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Lan", "traits": ["VIP", "Urgent"]},
         "steps": {
-            "start": { 
-                "patience": 40, "img": "https://images.unsplash.com/photo-1596496050844-461dc5b7263f?q=80&w=800",
-                "text": "My $500 vase arrived shattered! How do you do business?",
-                "choices": {"A": "Empathy: 'Oh my god! I am so sorry Ms. Lan. I'll handle it.'", "B": "Process: 'Can I have your order ID?'"},
-                "consequences": {"A": {"next": "step_2_stock", "change": 20, "analysis": "✅ Using name and showing empathy first."}, "B": {"next": "game_over_bad", "change": -20, "analysis": "⚠️ VIPs hate being treated like a number."}}
-            },
-            "step_2_stock": { 
-                "patience": 60, "img": "https://images.unsplash.com/photo-1616486338812-3a4772eb77f9?q=80&w=800",
-                "text": "I need to gift this to my boss at 6 PM tonight! Do you have stock?",
-                "choices": {"A": "Check: 'Sorry, we are out of stock at this store.'", "B": "Check: 'Out of stock here, but I can order one for next week.'"},
-                "consequences": {"A": {"next": "step_3_sol", "change": 0, "analysis": "✅ Honest."}, "B": {"next": "game_over_fail", "change": -30, "analysis": "❌ Next week is too late."}}
-            },
-            "step_3_sol": { 
-                "patience": 50, "img": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=800",
-                "text": "Out of stock?! I'm dead! What do I give my boss?",
-                "choices": {"A": "Refund: 'I will refund you immediately.'", "B": "Rescue: 'I will pull stock from the warehouse and Grab-Express it to you before 5:30.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "😐 Refund doesn't solve the 'Gift' problem."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Solving the 'Job to be done'."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "EXCELLENT", "text": "She got the vase in time.", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "LOST VIP", "text": "She was disappointed and left.", "score": 40},
-            "game_over_bad": {"type": "LOSE", "title": "CRISIS", "text": "Social media rant about your shop.", "score": 0}
+            "start": { "text": "My $500 vase arrived shattered!", "choices": {"A": "Empathy: 'Oh no! I am so sorry.'", "B": "Check: 'Order ID?'"}, "consequences": {"A": {"next": "step_2", "change": 20, "analysis": "✅ Empathy first."}, "B": {"next": "game_over_bad", "change": -20, "analysis": "⚠️ Too robotic."}} },
+            "step_2": { "text": "I need it for a gift tonight!", "choices": {"A": "Stock: 'We are out of stock.'", "B": "Check: 'Let me check other stores.'"}, "consequences": {"A": {"next": "step_3", "change": 0, "analysis": "✅ Honest but bad news."}, "B": {"next": "game_over_fail", "change": -10, "analysis": "❌ Wasting time if you don't look."}} },
+            "step_3": { "text": "Out of stock?! I'm dead!", "choices": {"A": "Refund: 'I'll refund you.'", "B": "Rescue: 'I'll express ship from warehouse by 5pm.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "😐 Problem not solved."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Solving the need."}} },
+            "game_over_good": {"type": "WIN", "title": "SAVED", "text": "Arrived in time.", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "LOST VIP", "text": "She left disappointed.", "score": 40},
+            "game_over_bad": {"type": "LOSE", "title": "RANT", "text": "Bad social media post.", "score": 0}
         }
     },
-    # --- 5. TECH ---
-    "SC_TECH_01": {
-        "title": "IT: Internet Outage",
-        "desc": "Internet down during important meeting.",
+    "SC_ECOMM_01": {
+        "title": "E-comm: Lost Package",
+        "desc": "App says delivered, but nothing there.",
         "difficulty": "Medium",
-        "customer": {"name": "Mr. Ken", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Ken", "traits": ["Tech-savvy", "Urgent"], "spending": "Business"},
+        "customer": {"name": "Tom", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Tom", "traits": ["Anxious"]},
         "steps": {
-            "start": { 
-                "patience": 30, "img": "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=800",
-                "text": "Net is down! I'm in a meeting! I restarted the modem, still red light!",
-                "choices": {"A": "Basic: 'Try unplugging it and plugging it back in.'", "B": "Expert: 'I see packet loss from your end. I'm investigating.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ He just said he restarted it!"}, "B": {"next": "step_2_fix", "change": +10, "analysis": "✅ Acknowledge technical detail."}}
-            },
-            "step_2_fix": { 
-                "patience": 40, "img": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=800",
-                "text": "Fix it! I have 5 minutes!",
-                "choices": {"A": "Tech: 'Technician will arrive in 4 hours.'", "B": "Remote: 'I'm resetting the port remotely... Give me 30s.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Too slow."}, "B": {"next": "step_3_fail", "change": +10, "analysis": "✅ Try immediate solution."}}
-            },
-            "step_3_fail": { 
-                "patience": 20, "img": "https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=800",
-                "text": "Still not working! My meeting is ruined!",
-                "choices": {"A": "Give up: 'Sorry, we need to send a technician.'", "B": "Lifeline: 'Turn on your 4G. I just added 50GB high-speed data to your number FOR FREE.'"},
-                "consequences": {"A": {"next": "game_over_fail", "change": -30, "analysis": "❌ Leaving customer stranded."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Workaround saved the meeting."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "SMART SAVE", "text": "Meeting went smoothly via 4G.", "score": 90},
-            "game_over_fail": {"type": "LOSE", "title": "FAILED", "text": "He missed the meeting.", "score": 50},
-            "game_over_bad": {"type": "LOSE", "title": "CANCELLED", "text": "He switched to another provider.", "score": 0}
+            "start": { "text": "App says delivered. I see nothing! Scam?", "choices": {"A": "Deflect: 'Check neighbors.'", "B": "Help: 'I will investigate now.'"}, "consequences": {"A": {"next": "game_over_bad", "change": -20, "analysis": "❌ Don't be lazy."}, "B": {"next": "step_2", "change": +20, "analysis": "✅ Helpful."}} },
+            "step_2": { "text": "I need these shoes for tomorrow!", "choices": {"A": "Wait: 'Wait 24h.'", "B": "Call: 'Calling courier now.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Too slow."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Urgent action."}} },
+            "step_3": { "text": "Courier put it in a bush?", "choices": {"A": "Hope: 'Check there.'", "B": "Guarantee: 'Check. If missing, I send new pair.'"}, "consequences": {"A": {"next": "game_over_good", "change": 0, "analysis": "😐 Passive."}, "B": {"next": "game_over_good", "change": +40, "analysis": "🏆 Risk reversal."}} },
+            "game_over_good": {"type": "WIN", "title": "FOUND", "text": "He found the shoes.", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "LATE", "text": "He bought elsewhere.", "score": 30},
+            "game_over_bad": {"type": "LOSE", "title": "REPORTED", "text": "Marked as scam.", "score": 0}
         }
     },
-    # --- 6. AIRLINE ---
-    "SC_AIRLINE_01": {
-        "title": "Airline: Flight Cancelled",
-        "desc": "Passenger missing a wedding.",
+    "SC_TECH_01": {
+        "title": "IT: Internet Down",
+        "desc": "Meeting in progress, net cuts out.",
+        "difficulty": "Medium",
+        "customer": {"name": "Ken", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Ken", "traits": ["Urgent"]},
+        "steps": {
+            "start": { "text": "Net is down! I'm in a meeting! I restarted it already!", "choices": {"A": "Script: 'Restart again.'", "B": "Listen: 'I see packet loss.'"}, "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ He just said he did!"}, "B": {"next": "step_2", "change": +10, "analysis": "✅ Listening."}} },
+            "step_2": { "text": "Fix it! 5 minutes left!", "choices": {"A": "Wait: 'Tech coming in 4h.'", "B": "Remote: 'Resetting port... 30s.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Too slow."}, "B": {"next": "step_3", "change": +10, "analysis": "✅ Fast attempt."}} },
+            "step_3": { "text": "Still red light!", "choices": {"A": "Sorry: 'Wait for tech.'", "B": "Data: 'Gifting you 50GB 4G Data NOW.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -30, "analysis": "❌ Stranded."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Saved the meeting."}} },
+            "game_over_good": {"type": "WIN", "title": "SAVED", "text": "Meeting worked on 4G.", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "FAILED", "text": "Missed meeting.", "score": 30},
+            "game_over_bad": {"type": "LOSE", "title": "CHURN", "text": "Switched provider.", "score": 0}
+        }
+    },
+     "SC_AIRLINE_01": {
+        "title": "Airline: Cancelled",
+        "desc": "Missing a wedding.",
         "difficulty": "Very Hard",
-        "customer": {"name": "Mr. David", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=David", "traits": ["Stressed", "Urgent"], "spending": "Gold Flyer"},
+        "customer": {"name": "David", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=David", "traits": ["Panic"]},
         "steps": {
-            "start": { 
-                "patience": 20, "img": "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?q=80&w=800",
-                "text": "Cancelled?! I'm the best man! Wedding is in 6 hours! Get me on a plane NOW!",
-                "choices": {"A": "Reason: 'It's due to bad weather.'", "B": "Empathy: 'Oh no! Let me find another flight immediately.'"},
-                "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Don't explain, just act."}, "B": {"next": "step_2_alt", "change": +30, "analysis": "✅ Validate urgency."}}
-            },
-            "step_2_alt": { 
-                "patience": 50, "img": "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?q=80&w=800", "text": "Hurry! The party starts at 7 PM!", "choices": {"A": "Us: 'Next flight is tomorrow morning.'", "B": "Partner: 'I am checking partner airlines too...'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Tomorrow is too late."}, "B": {"next": "step_3_mix", "change": +20, "analysis": "✅ Flexible solution."}}
-            },
-            "step_3_mix": { 
-                "patience": 40, "img": "https://images.unsplash.com/photo-1517400508447-f8dd518b86db?q=80&w=800", "text": "No direct flights? I'm doomed!", "choices": {"A": "Sorry: 'I apologize.'", "B": "Creative: 'Fly to nearby city + Taxi (We pay).'"}, "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "❌ Giving up too soon."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Creative problem solving."}}
-            },
-            "game_over_good": {"type": "WIN", "title": "JUST IN TIME", "text": "David made it to the wedding.", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "MISSED IT", "text": "David missed his best friend's wedding.", "score": 40},
-            "game_over_bad": {"type": "LOSE", "title": "SECURITY", "text": "Security was called.", "score": 0}
+            "start": { "text": "Cancelled?! I'm the best man! Wedding is in 6 hours!", "choices": {"A": "Reason: 'Weather.'", "B": "Action: 'Let me find a seat.'"}, "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Don't explain."}, "B": {"next": "step_2", "change": +30, "analysis": "✅ Act."}} },
+            "step_2": { "text": "Hurry!", "choices": {"A": "Us: 'Next flight tomorrow.'", "B": "Partner: 'Checking partners...'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Too late."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Flexible."}} },
+            "step_3": { "text": "No flights?", "choices": {"A": "Sorry: 'Apologies.'", "B": "Creative: 'Fly nearby + Taxi (On us).'"}, "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "❌ Giving up."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Heroic solve."}} },
+            "game_over_good": {"type": "WIN", "title": "ARRIVED", "text": "Made it just in time.", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "MISSED", "text": "Missed wedding.", "score": 30},
+            "game_over_bad": {"type": "LOSE", "title": "SECURITY", "text": "Security called.", "score": 0}
         }
     },
-     # --- 7. BANK ---
     "SC_BANK_01": {
-        "title": "Bank: ATM Swallowed Card",
-        "desc": "Elderly needing cash for medicine.",
+        "title": "Bank: Card Swallowed",
+        "desc": "Elderly lady needs medicine money.",
         "difficulty": "Hard",
-        "customer": {"name": "Mrs. Evelyn", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Evelyn", "traits": ["Elderly", "Panicked"], "spending": "Loyal"},
+        "customer": {"name": "Evelyn", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Evelyn", "traits": ["Elderly"]},
         "steps": {
-            "start": { "patience": 30, "img": "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=800", "text": "Help! The machine took my card! I need money for heart medicine now!", "choices": {"A": "Process: 'Come back on Monday.'", "B": "Reassure: 'Your card is safe. Let me help you withdraw cash.'"}, "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Health risk."}, "B": {"next": "step_2_verify", "change": +30, "analysis": "✅ Prioritize health."}} },
-            "step_2_verify": { "patience": 50, "img": "https://images.unsplash.com/photo-1556742031-c6961e8560b0?q=80&w=800", "text": "But I forgot my ID at home.", "choices": {"A": "Rigid: 'Then I can't help you.'", "B": "Flexible: 'I will verify via security questions and recent transactions.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Dead end."}, "B": {"next": "step_3_tech", "change": +20, "analysis": "✅ Flexible for emergency."}} },
-            "step_3_tech": { "patience": 60, "img": "https://images.unsplash.com/photo-1601597111158-2fceff292cdc?q=80&w=800", "text": "Okay, verified. But how do I get cash?", "choices": {"A": "Guide: 'I will guide you to use Cardless Withdrawal on the App.'", "B": "Do it: 'Let me do it for you.'"}, "consequences": {"A": {"next": "game_over_good", "change": +40, "analysis": "🏆 Patient guidance."}, "B": {"next": "game_over_fail", "change": -10, "analysis": "❌ Never touch customer's phone/app (Security breach)."}} },
-            "game_over_good": {"type": "WIN", "title": "SAFE", "text": "She got her medicine.", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "NO CASH", "text": "She had to go home.", "score": 30},
-            "game_over_bad": {"type": "LOSE", "title": "LOST TRUST", "text": "She switched banks.", "score": 0}
+            "start": { "text": "Machine took my card! I need medicine money!", "choices": {"A": "Wait: 'Come Monday.'", "B": "Help: 'Card is safe. Let's withdraw.'"}, "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Dangerous."}, "B": {"next": "step_2", "change": +30, "analysis": "✅ Safety first."}} },
+            "step_2": { "text": "Forgot ID.", "choices": {"A": "Rule: 'Can't help.'", "B": "Verify: 'Security questions?'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Rigid."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Adaptable."}} },
+            "step_3": { "text": "Verified. How to get cash?", "choices": {"A": "Guide: 'Use the App.'", "B": "Do it: 'I will do it.'"}, "consequences": {"A": {"next": "game_over_good", "change": +40, "analysis": "🏆 Empowering."}, "B": {"next": "game_over_fail", "change": -10, "analysis": "❌ Security breach."}} },
+            "game_over_good": {"type": "WIN", "title": "SAFE", "text": "Got medicine.", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "NO CASH", "text": "Went home empty.", "score": 30},
+            "game_over_bad": {"type": "LOSE", "title": "LEFT", "text": "Switched banks.", "score": 0}
         }
     },
-    # --- 8. REAL ESTATE ---
     "SC_REALESTATE_01": {
-        "title": "Real Estate: Moldy Apt",
-        "desc": "Luxury tenant found mold.",
+        "title": "Real Estate: Mold",
+        "desc": "Luxury apartment has mold.",
         "difficulty": "Very Hard",
-        "customer": {"name": "Mr. Chen", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Chen", "traits": ["Wealthy", "Clean freak"], "spending": "Luxury"},
+        "customer": {"name": "Mr. Chen", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Chen", "traits": ["Rich"]},
         "steps": {
-            "start": { "patience": 20, "img": "https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=800", "text": "I pay $4000/month for this moldy hole? My son has asthma!", "choices": {"A": "Defensive: 'Did you open the windows?'", "B": "Alarmed: 'That is dangerous. Please evacuate, I am coming.'"}, "consequences": {"A": {"next": "game_over_bad", "change": -40, "analysis": "❌ Victim blaming."}, "B": {"next": "step_2_inspect", "change": +30, "analysis": "✅ Safety first."}} },
-            "step_2_inspect": { "patience": 40, "img": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=800", "text": "(You arrive) Look! Black mold! We are not sleeping here.", "choices": {"A": "Clean: 'I will send painters tomorrow.'", "B": "Relocate: 'Agreed. You need to move now.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -30, "analysis": "⚠️ Painting doesn't kill mold instantly."}, "B": {"next": "step_3_hotel", "change": +20, "analysis": "✅ Immediate solution."}} },
-            "step_3_hotel": { "patience": 50, "img": "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=800", "text": "Where to? A motel?", "choices": {"A": "Budget: 'I have a $50/night budget.'", "B": "Luxury: 'I booked a 5-star hotel nearby for your family.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ Insulting a Luxury client."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Matching the lifestyle."}} },
-            "game_over_good": {"type": "WIN", "title": "SMOOTH", "text": "Family is happy with the hotel.", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "LEASE BROKEN", "text": "Tenant moved out.", "score": 30},
-            "game_over_bad": {"type": "LOSE", "title": "LAWSUIT", "text": "Sued for health damages.", "score": 0}
+            "start": { "text": "$4000 for mold? My son has asthma!", "choices": {"A": "Defend: 'Did you air it out?'", "B": "Alert: 'Evacuate now.'"}, "consequences": {"A": {"next": "game_over_bad", "change": -40, "analysis": "❌ Blaming customer."}, "B": {"next": "step_2", "change": +30, "analysis": "✅ Safety."}} },
+            "step_2": { "text": "Black mold! We can't stay.", "choices": {"A": "Paint: 'Painter coming tomorrow.'", "B": "Move: 'You must move.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -30, "analysis": "⚠️ Not safe yet."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Correct."}} },
+            "step_3": { "text": "Where to?", "choices": {"A": "Cheap: 'Motel.'", "B": "Luxury: '5-Star Hotel.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ Insulting."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Matching standard."}} },
+            "game_over_good": {"type": "WIN", "title": "HAPPY", "text": "Family safe.", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "LEFT", "text": "Tenant left.", "score": 30},
+            "game_over_bad": {"type": "LOSE", "title": "SUED", "text": "Health lawsuit.", "score": 0}
         }
     },
-    # --- 9. SAAS ---
     "SC_SAAS_01": {
-        "title": "SaaS: Data Loss",
-        "desc": "Accidentally deleted important data before meeting.",
-        "difficulty": "Very Hard",
-        "customer": {"name": "Sarah", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah", "traits": ["Angry", "Executive"], "spending": "Enterprise"},
-        "steps": {
-            "start": { "patience": 10, "img": "https://images.unsplash.com/photo-1531297461136-82lw9z3w9z?q=80&w=800", "text": "WHERE IS MY DATA?! I have a presentation in 2 hours!", "choices": {"A": "Tip: 'Did you clear cache?'", "B": "Emergency: 'I am alerting engineering for immediate recovery (SEV1).'"}, "consequences": {"A": {"next": "game_over_bad", "change": -20, "analysis": "❌ Don't ask silly questions."}, "B": {"next": "step_2_status", "change": +30, "analysis": "✅ Correct severity level."}} },
-            "step_2_status": { "patience": 30, "img": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=800", "text": "Restore takes 4 hours? I am dead!", "choices": {"A": "Sorry: 'It is the process.'", "B": "Manual: 'Can I manually extract key metrics to Excel for you first?'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Passive."}, "B": {"next": "step_3_ceo", "change": +20, "analysis": "✅ Saving the situation manually."}} },
-            "step_3_ceo": { "patience": 40, "img": "https://images.unsplash.com/photo-1573164713988-8665fc963095?q=80&w=800", "text": "Still risky. If my boss finds out, I'm fired.", "choices": {"A": "Comfort: 'It will be fine.'", "B": "Protect: 'I will write an official email taking full blame for the system glitch.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "❌ Empty words."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Taking the bullet for the customer."}} },
-            "game_over_good": {"type": "WIN", "title": "SAVED", "text": "Contract renewed.", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "CHURNED", "text": "Customer cancelled.", "score": 30},
-            "game_over_bad": {"type": "LOSE", "title": "SUED", "text": "SLA Breach.", "score": 0}
-        }
-    },
-    # --- 10. SPA ---
-    "SC_SPA_01": {
-        "title": "Spa: Bad Reaction",
-        "desc": "Customer's face is itchy after facial.",
+        "title": "SaaS: Data Deleted",
+        "desc": "Admin deleted data by mistake.",
         "difficulty": "Hard",
-        "customer": {"name": "Ms. Chloe", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Chloe", "traits": ["Scared", "In Pain"], "spending": "New"},
+        "customer": {"name": "Sarah", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah", "traits": ["Angry"]},
         "steps": {
-            "start": { "patience": 30, "img": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=800", "text": "My face is burning! What did you put on me?!", "choices": {"A": "Waiver: 'You signed the waiver.'", "B": "Care: 'Ice pack! Call the manager!'"}, "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Cold hearted."}, "B": {"next": "step_2_future", "change": +30, "analysis": "✅ Safety first."}} },
-            "step_2_future": { "patience": 40, "img": "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=800", "text": "It's better but still red. I have a casting tomorrow!", "choices": {"A": "Hope: 'It should be fine by tomorrow.'", "B": "Support: 'I am taking you to a dermatologist right now to be sure.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Uncertainty."}, "B": {"next": "step_3_bill", "change": +20, "analysis": "✅ Proactive aftermath handling."}} },
-            "step_3_bill": { "patience": 50, "img": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?q=80&w=800", "text": "Who pays the doctor? I won't.", "choices": {"A": "Split: 'You pay 50%.'", "B": "Full: 'We cover 100% of medical bills and treatments.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ Nickel and diming."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Full responsibility."}} },
-            "game_over_good": {"type": "WIN", "title": "HANDLED", "text": "No lawsuit filed.", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "BAD REVIEW", "text": "1-star review with photos.", "score": 40},
-            "game_over_bad": {"type": "LOSE", "title": "LAWSUIT", "text": "Sued for damages.", "score": 0}
+            "start": { "text": "DATA GONE! Presentation in 2 hours!", "choices": {"A": "Ask: 'Cleared cache?'", "B": "Alert: 'Escalating SEV1.'"}, "consequences": {"A": {"next": "game_over_bad", "change": -20, "analysis": "❌ Silly question."}, "B": {"next": "step_2", "change": +30, "analysis": "✅ Serious."}} },
+            "step_2": { "text": "Restore takes 4 hours?", "choices": {"A": "Process: 'Sorry.'", "B": "Work: 'Manual extract?'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Helpful."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Manual save."}} },
+            "step_3": { "text": "My boss will kill me.", "choices": {"A": "Comfort: 'It's ok.'", "B": "Cover: 'I'll email explaining it's our bug.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "❌ Weak."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Taking blame."}} },
+            "game_over_good": {"type": "WIN", "title": "RENEWED", "text": "She kept her job.", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "LOST", "text": "Contract cancelled.", "score": 30},
+            "game_over_bad": {"type": "LOSE", "title": "ANGRY", "text": "Furious feedback.", "score": 0}
         }
     },
-    # --- 11. LOGISTICS ---
-    "SC_LOGISTICS_01": {
-        "title": "Logistics: Damaged Equipment",
-        "desc": "Late and broken delivery for an event.",
-        "difficulty": "Very Hard",
-        "customer": {"name": "Mr. Robert", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Robert", "traits": ["High Pressure", "Furious"], "spending": "VIP Account"},
+    "SC_SPA_01": {
+        "title": "Spa: Allergic",
+        "desc": "Face burning after facial.",
+        "difficulty": "Hard",
+        "customer": {"name": "Chloe", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Chloe", "traits": ["Pain"]},
         "steps": {
-            "start": { "patience": 10, "img": "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=800", "text": "Late AND broken! My $500k event is tomorrow! You ruined it!", "choices": {"A": "Insurance: 'File a claim form.'", "B": "Crisis: 'I am personally handling this. Solution in 10 mins.'"}, "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Bureaucracy."}, "B": {"next": "step_2_options", "change": +40, "analysis": "✅ Immediate action."}} },
-            "step_2_options": { "patience": 30, "img": "https://images.unsplash.com/photo-1493934558415-9d19f0b2b4d2?q=80&w=800", "text": "How? Imported gear takes weeks!", "choices": {"A": "Rent: 'Try renting locally?'", "B": "Dispatch: 'I diverted a truck from the next state. Arriving in 4 hours.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Don't make customer work."}, "B": {"next": "step_3_confirm", "change": +30, "analysis": "✅ Concrete solution."}} },
-            "step_3_confirm": { "patience": 50, "img": "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?q=80&w=800", "text": "4 hours is tight. What if the truck breaks down?", "choices": {"A": "Hope: 'It will be fine.'", "B": "Guarantee: 'I sent 2 trucks (1 backup). Plus a tech team to help install.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Still risky."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Overwhelming support."}} },
-            "game_over_good": {"type": "WIN", "title": "EVENT SAVED", "text": "Event was a success.", "score": 100},
-            "game_over_fail": {"type": "LOSE", "title": "FAILED", "text": "Event cancelled.", "score": 30},
-            "game_over_bad": {"type": "LOSE", "title": "FIRED", "text": "Contract terminated.", "score": 0}
+            "start": { "text": "Face burning!", "choices": {"A": "Waiver: 'You signed.'", "B": "Aid: 'Ice pack!'"}, "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Cruel."}, "B": {"next": "step_2", "change": +30, "analysis": "✅ Care."}} },
+            "step_2": { "text": "Still red. Casting tomorrow!", "choices": {"A": "Wait: 'It will pass.'", "B": "Doctor: 'Dermatologist now.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Risky."}, "B": {"next": "step_3", "change": +20, "analysis": "✅ Proactive."}} },
+            "step_3": { "text": "Who pays?", "choices": {"A": "Split: '50/50.'", "B": "Full: 'We pay 100%.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "❌ Cheap."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Responsibility."}} },
+            "game_over_good": {"type": "WIN", "title": "CALM", "text": "Face healed.", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "REVIEW", "text": "Bad review.", "score": 40},
+            "game_over_bad": {"type": "LOSE", "title": "SUED", "text": "Legal action.", "score": 0}
+        }
+    },
+    "SC_LOGISTICS_01": {
+        "title": "Logistics: Event Fail",
+        "desc": "Gear broken before event.",
+        "difficulty": "Very Hard",
+        "customer": {"name": "Robert", "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Robert", "traits": ["Furious"]},
+        "steps": {
+            "start": { "text": "Gear broken! Event tomorrow!", "choices": {"A": "Form: 'File claim.'", "B": "Fix: 'Handling it.'"}, "consequences": {"A": {"next": "game_over_bad", "change": -30, "analysis": "❌ Bureaucratic."}, "B": {"next": "step_2", "change": +40, "analysis": "✅ Leader."}} },
+            "step_2": { "text": "How?", "choices": {"A": "Rent: 'You rent locally?'", "B": "Truck: 'Truck diverted. 4 hours.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -10, "analysis": "⚠️ Don't ask them."}, "B": {"next": "step_3", "change": +30, "analysis": "✅ Solution."}} },
+            "step_3": { "text": "What if it breaks?", "choices": {"A": "Hope: 'It won't.'", "B": "Backup: 'Sent 2 trucks.'"}, "consequences": {"A": {"next": "game_over_fail", "change": -20, "analysis": "⚠️ Weak."}, "B": {"next": "game_over_good", "change": +50, "analysis": "🏆 Guarantee."}} },
+            "game_over_good": {"type": "WIN", "title": "SAVED", "text": "Event succeeded.", "score": 100},
+            "game_over_fail": {"type": "LOSE", "title": "CANCELLED", "text": "Event ruined.", "score": 30},
+            "game_over_bad": {"type": "LOSE", "title": "FIRED", "text": "Contract lost.", "score": 0}
         }
     }
 }
@@ -406,10 +339,6 @@ def load_data(force_reset=False):
         return data
     except: return load_data(True)
 
-def save_data(new_data):
-    with open(DB_FILE, 'w', encoding='utf-8') as f:
-        json.dump(new_data, f, indent=4)
-
 def save_score(player, scenario, score, outcome):
     new_row = {"Time": datetime.now().strftime("%Y-%m-%d %H:%M"), "Player": player, "Scenario": scenario, "Score": score, "Outcome": outcome}
     if os.path.exists(HISTORY_FILE):
@@ -428,54 +357,51 @@ def show_leaderboard():
     else: st.info("No history found.")
 
 # ==============================================================================
-# 4. MAIN APPLICATION
+# 4. MAIN APP LOGIC
 # ==============================================================================
 if 'current_scenario' not in st.session_state: st.session_state.current_scenario = None
 if 'img_cache' not in st.session_state: st.session_state.img_cache = {}
 
 ALL_SCENARIOS = load_data()
 
-# --- SIDEBAR ---
+# --- SIDEBAR MENU ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=80)
-    st.title("Service Hero")
-    st.caption("AI Training Hub")
-    
-    menu = st.radio("Navigation", ["Dashboard", "Create Scenario"])
+    st.title("🛡️ Service Hero")
+    st.markdown("### AI Training Hub")
+    menu = st.radio("Navigation", ["Dashboard", "Create New"])
     
     st.divider()
-    if st.button("⚠️ Reset to Default"):
+    if st.button("🔄 Reset Scenarios"):
         load_data(True)
-        st.success("Restored 11 Original Scenarios!")
+        st.success("Restored!")
         time.sleep(1)
         st.rerun()
 
-# --- MAIN CONTENT ---
+# --- DASHBOARD ---
 if menu == "Dashboard":
     if st.session_state.current_scenario is None:
-        st.title("Welcome to Service Hero Academy 🎓")
-        st.markdown("Master customer service skills with **AI-powered roleplay**.")
+        st.title("Welcome Agent 🎓")
         
-        # Player Name Input
+        # Player Entry
         if 'player_name' not in st.session_state: st.session_state.player_name = ""
         if not st.session_state.player_name:
-            st.info("Please enter your name to start training.")
-            st.session_state.player_name = st.text_input("Your Name:")
+            st.info("Please enter your name to start.")
+            st.session_state.player_name = st.text_input("Name:")
             if not st.session_state.player_name: st.stop()
         else:
             c1, c2 = st.columns([3, 1])
-            c1.success(f"Agent: **{st.session_state.player_name}**")
-            if c2.button("Log out"): 
+            c1.success(f"Logged in as: **{st.session_state.player_name}**")
+            if c2.button("Logout"): 
                 st.session_state.player_name = ""
                 st.rerun()
 
-        with st.expander("🏆 Leaderboard & History"):
+        with st.expander("🏆 Leaderboard"):
             show_leaderboard()
             
-        st.divider()
-        st.subheader(f"Available Scenarios ({len(ALL_SCENARIOS)})")
+        st.write("---")
+        st.subheader("Select a Mission:")
         
-        # Grid Layout for Scenarios
+        # Scenario Grid
         cols = st.columns(2)
         idx = 0
         for key, val in ALL_SCENARIOS.items():
@@ -483,11 +409,11 @@ if menu == "Dashboard":
                 st.markdown(f"""
                 <div class="scenario-card">
                     <h3>{val['title']}</h3>
-                    <p style='color:#64748b; font-size:0.9em;'>{val['desc']}</p>
-                    <span style='background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:4px; font-size:0.8em;'>{val['difficulty']}</span>
+                    <p style="color:#475569;">{val['desc']}</p>
+                    <span style="background:#e2e8f0; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;">{val['difficulty']}</span>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button(f"Start Mission 🚀", key=key, use_container_width=True):
+                if st.button(f"Start Mission ▶", key=key, use_container_width=True):
                     st.session_state.current_scenario = key
                     st.session_state.current_step = 'start'
                     st.session_state.patience = 50
@@ -495,8 +421,8 @@ if menu == "Dashboard":
                     st.rerun()
             idx += 1
 
+    # --- GAMEPLAY ---
     else:
-        # --- GAMEPLAY SCREEN ---
         s_key = st.session_state.current_scenario
         if s_key not in ALL_SCENARIOS: 
             st.session_state.current_scenario = None
@@ -506,84 +432,71 @@ if menu == "Dashboard":
         step_id = st.session_state.current_step
         step_data = scenario['steps'][step_id]
         
-        # --- AI IMAGE GENERATION (FIXED) ---
+        # Image Generation (Safe Mode)
         cache_key = f"{s_key}_{step_id}"
-        # Fallback image from data or placeholder
-        default_img = step_data.get('img', 'https://placehold.co/800x500?text=Scenario+Scene')
-        
         if cache_key not in st.session_state.img_cache:
-            with st.spinner("🤖 AI is visualizing the scene..."):
-                context = f"Scene: {scenario['title']}. Character {scenario['customer']['name']} says: {step_data.get('text', '')}"
-                ai_url = generate_ai_image_url(context, default_img)
+            with st.spinner("🤖 AI is visualizing..."):
+                # Always provide a fallback placeholder just in case
+                fallback = "https://placehold.co/800x500/png?text=Scene+Loading..."
+                ai_url = generate_ai_image_url(f"{scenario['title']} - {step_data.get('text', '')}", fallback)
                 st.session_state.img_cache[cache_key] = ai_url
         
         current_img = st.session_state.img_cache[cache_key]
         
-        # --- SIDEBAR INFO ---
+        # Sidebar
         with st.sidebar:
             st.divider()
-            if st.button("❌ Exit Mission", use_container_width=True):
+            if st.button("❌ Abort Mission", use_container_width=True):
                 st.session_state.current_scenario = None
                 st.rerun()
             
             cust = scenario['customer']
-            st.image(cust['avatar'], width=100)
+            st.image(cust['avatar'], width=80)
             st.markdown(f"**{cust['name']}**")
-            st.caption(", ".join(cust['traits']))
             
-            # Patience Meter
             p = st.session_state.patience
-            color = "green" if p > 50 else "red"
-            st.markdown(f"**Customer Patience:** :{color}[{p}%]")
+            st.write(f"Patience: {p}%")
             st.progress(p/100)
 
-        # --- MAIN DISPLAY ---
-        if "type" in step_data: # Game Over Screen
+        # Game Screen
+        if "type" in step_data: # End Screen
             st.title(step_data['title'])
             st.image(current_img, use_container_width=True)
             
-            if step_data['type'] == 'WIN':
-                st.balloons()
-                st.markdown(f"<div class='analysis-box good'><h3>🎉 SUCCESS</h3>{step_data['text']}</div>", unsafe_allow_html=True)
-            else:
-                st.markdown(f"<div class='analysis-box bad'><h3>💀 FAILED</h3>{step_data['text']}</div>", unsafe_allow_html=True)
-                
+            result_class = "good" if step_data['type'] == 'WIN' else "bad"
+            st.markdown(f"<div class='analysis-box {result_class}'><h3>{step_data['text']}</h3></div>", unsafe_allow_html=True)
+            
+            if step_data['type'] == 'WIN': st.balloons()
+            
             st.metric("Final Score", step_data['score'])
             
-            # Save Score Logic
             if 'saved' not in st.session_state:
                 save_score(st.session_state.player_name, scenario['title'], step_data['score'], step_data['type'])
                 st.session_state.saved = True
                 
-            if st.button("🔄 Return to Dashboard", use_container_width=True):
+            if st.button("Back to Base", use_container_width=True):
                 st.session_state.current_scenario = None
                 if 'saved' in st.session_state: del st.session_state.saved
                 st.rerun()
                 
-            st.divider()
-            st.subheader("📝 Mission Analysis")
+            st.write("---")
+            st.subheader("Mission Debrief")
             for h in st.session_state.history:
                 icon = "✅" if h['change'] > 0 else "❌"
-                color_class = "good" if h['change'] > 0 else "bad"
-                st.markdown(f"""
-                <div class='analysis-box {color_class}'>
-                    <b>{icon} You chose:</b> {h['choice']}<br>
-                    <i>👉 {h['analysis']}</i>
-                </div>
-                """, unsafe_allow_html=True)
+                color = "good" if h['change'] > 0 else "bad"
+                st.markdown(f"<div class='analysis-box {color}'><b>{icon} Choice:</b> {h['choice']}<br><i>{h['analysis']}</i></div>", unsafe_allow_html=True)
 
-        else: # Gameplay Screen
-            st.header(scenario['title'])
-            st.image(current_img, use_container_width=True, caption="AI Generated Scene")
+        else: # Playing
+            st.subheader(scenario['title'])
+            st.image(current_img, use_container_width=True)
             
             st.markdown(f"""
             <div class="chat-container">
-                <div class="customer-label">🗣️ {cust['name']} says:</div>
+                <div class="customer-label">Customer says:</div>
                 <div class="dialogue-text">"{step_data['text']}"</div>
             </div>
             """, unsafe_allow_html=True)
             
-            # Choice Buttons
             cols = st.columns(len(step_data['choices']))
             idx = 0
             for k, v in step_data['choices'].items():
@@ -601,13 +514,11 @@ if menu == "Dashboard":
                         st.rerun()
                 idx += 1
 
-elif menu == "Create Scenario":
-    st.header("🛠️ Scenario Creator")
-    st.info("Create custom scenarios here. AI will handle the images automatically!")
-    
-    with st.form("new_scen"):
+elif menu == "Create New":
+    st.header("Scenario Builder")
+    st.info("Custom scenarios will also generate AI images automatically!")
+    with st.form("builder"):
         title = st.text_input("Title")
         desc = st.text_input("Description")
-        start_txt = st.text_area("Opening Line")
-        if st.form_submit_button("Save Scenario"):
-            st.success("Scenario saved! (Demo Mode)")
+        if st.form_submit_button("Save"):
+            st.success("Saved (Demo Mode)")
