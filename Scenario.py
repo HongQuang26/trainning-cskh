@@ -9,7 +9,7 @@ import google.generativeai as genai
 import random
 
 # ==============================================================================
-# 0. CẤU HÌNH & KHỞI TẠO (SMART AUTO-CONNECT)
+# 0. CẤU HÌNH & KHỞI TẠO (CƠ CHẾ THỬ SAI - FAILSAFE)
 # ==============================================================================
 GEMINI_API_KEY = "AIzaSyBCPg9W5dvvNygm4KEM-gbn9_wPnvfUsrI"
 
@@ -20,48 +20,51 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- HÀM TỰ ĐỘNG KẾT NỐI AI ---
-def init_gemini_smart():
-    """Tự động tìm và kết nối model AI tốt nhất đang khả dụng để tránh lỗi 404"""
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        
-        # 1. Danh sách ưu tiên (Thử từ mới nhất đến cũ hơn)
-        priority_models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro', 'gemini-pro']
-        
-        # 2. Lấy danh sách thực tế từ Google (nếu key đúng)
-        available_models = []
+# --- HÀM TỰ ĐỘNG KẾT NỐI AI SIÊU BỀN ---
+def init_gemini_failsafe():
+    """
+    Thử lần lượt từng model. Cái nào chạy được thì chốt luôn.
+    Không phụ thuộc vào list_models (vì list_models có thể bị lỗi quyền).
+    """
+    genai.configure(api_key=GEMINI_API_KEY)
+    
+    # Danh sách các tên model có thể dùng (Ưu tiên cái ổn định trước)
+    # gemini-1.5-flash: Mới, nhanh nhưng hay lỗi 404 nếu chưa cấp quyền
+    # gemini-pro: Cũ nhưng cực kỳ ổn định, ai cũng dùng được
+    # gemini-1.0-pro: Tên gọi khác của pro
+    candidate_models = ['gemini-1.5-flash', 'gemini-pro', 'gemini-1.0-pro']
+    
+    active_model = None
+    model_name_used = ""
+
+    print("🔄 Đang dò tìm Model AI phù hợp...")
+
+    for m_name in candidate_models:
         try:
-            for m in genai.list_models():
-                if 'generateContent' in m.supported_generation_methods:
-                    name = m.name.replace('models/', '')
-                    available_models.append(name)
-        except:
-            pass # Nếu lỗi kết nối khi list, sẽ dùng danh sách ưu tiên để thử mù
+            # 1. Khởi tạo
+            temp_model = genai.GenerativeModel(m_name)
+            
+            # 2. TEST THỬ NGAY (Gửi 1 tin nhắn test nhẹ)
+            # Nếu bước này không lỗi 404 thì mới tính là thành công
+            temp_model.generate_content("Hello", request_options={"timeout": 5})
+            
+            # Nếu code chạy đến đây nghĩa là model này NGON
+            active_model = temp_model
+            model_name_used = m_name
+            print(f"✅ Đã kết nối thành công với: {m_name}")
+            break # Thoát vòng lặp
+        except Exception as e:
+            print(f"❌ {m_name} bị lỗi (Bỏ qua): {e}")
+            continue # Thử cái tiếp theo
 
-        # 3. Chọn model
-        selected_model = None
-        
-        # Nếu lấy được danh sách thật -> so khớp
-        if available_models:
-            for p_model in priority_models:
-                if p_model in available_models:
-                    selected_model = p_model
-                    break
-        
-        # Nếu chưa chọn được (do không list được hoặc không khớp), chọn cái đầu tiên trong ưu tiên làm mặc định
-        if not selected_model:
-            selected_model = 'gemini-1.5-flash' # Mặc định tốt nhất hiện tại
-
-        print(f"✅ AI Connected to: {selected_model}")
-        return genai.GenerativeModel(selected_model), True
-
-    except Exception as e:
-        print(f"❌ AI Error: {e}")
+    if active_model:
+        return active_model, True
+    else:
+        print("❌ TẤT CẢ MODEL ĐỀU THẤT BẠI. KIỂM TRA LẠI API KEY.")
         return None, False
 
 # Khởi tạo
-model, AI_READY = init_gemini_smart()
+model, AI_READY = init_gemini_failsafe()
 
 # --- KHO ẢNH DỰ PHÒNG (BACKUP LIBRARY) ---
 BACKUP_IMAGES = {
@@ -281,6 +284,7 @@ with st.sidebar:
         st.caption("✅ AI Core: Online")
     else:
         st.caption("⚠️ AI Core: Offline")
+        st.error("Lỗi AI: Vui lòng xem Terminal để biết chi tiết.")
         
     menu = st.radio("NAVIGATION", ["DASHBOARD", "CREATE (AI)", "PHÒNG TẬP (AI CHAT)"])
     st.divider()
@@ -423,7 +427,7 @@ elif menu == "CREATE (AI)":
         
         if submitted and topic:
             if not AI_READY:
-                st.error("AI chưa sẵn sàng. Vui lòng kiểm tra API Key.")
+                st.error("AI chưa sẵn sàng. Vui lòng kiểm tra API Key hoặc kết nối mạng.")
             else:
                 with st.spinner("AI đang viết kịch bản..."):
                     try:
@@ -481,7 +485,7 @@ elif menu == "PHÒNG TẬP (AI CHAT)":
         with st.chat_message("assistant"):
             with st.spinner("Khách đang gõ..."):
                 if not AI_READY:
-                    st.error("AI chưa sẵn sàng.")
+                    st.error("AI chưa sẵn sàng. (Kiểm tra Terminal để xem lỗi 404)")
                 else:
                     try:
                         history_text = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.roleplay_messages])
@@ -498,5 +502,5 @@ elif menu == "PHÒNG TẬP (AI CHAT)":
                         
                         st.markdown(ai_reply)
                         st.session_state.roleplay_messages.append({"role": "assistant", "content": ai_reply})
-                    except:
-                        st.error("Lỗi kết nối AI.")
+                    except Exception as e:
+                        st.error(f"Lỗi kết nối AI: {e}")
