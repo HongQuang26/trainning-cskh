@@ -9,9 +9,8 @@ import google.generativeai as genai
 import random
 
 # ==============================================================================
-# 0. CẤU HÌNH & KHỞI TẠO
+# 0. CẤU HÌNH & KHỞI TẠO (SMART AUTO-CONNECT)
 # ==============================================================================
-# CẬP NHẬT API KEY MỚI CỦA BẠN
 GEMINI_API_KEY = "AIzaSyBCPg9W5dvvNygm4KEM-gbn9_wPnvfUsrI"
 
 st.set_page_config(
@@ -21,16 +20,48 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Khởi tạo Gemini
-AI_READY = False
-try:
-    genai.configure(api_key=GEMINI_API_KEY)
-    # Thay đổi: Dùng 'gemini-pro' thay vì 'gemini-1.5-flash' để tránh lỗi 404
-    model = genai.GenerativeModel('gemini-pro')
-    AI_READY = True
-except Exception as e:
-    print(f"Lỗi kết nối AI: {e}") # In lỗi ra để dễ kiểm tra nếu cần
-    pass
+# --- HÀM TỰ ĐỘNG KẾT NỐI AI ---
+def init_gemini_smart():
+    """Tự động tìm và kết nối model AI tốt nhất đang khả dụng để tránh lỗi 404"""
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        
+        # 1. Danh sách ưu tiên (Thử từ mới nhất đến cũ hơn)
+        priority_models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro', 'gemini-pro']
+        
+        # 2. Lấy danh sách thực tế từ Google (nếu key đúng)
+        available_models = []
+        try:
+            for m in genai.list_models():
+                if 'generateContent' in m.supported_generation_methods:
+                    name = m.name.replace('models/', '')
+                    available_models.append(name)
+        except:
+            pass # Nếu lỗi kết nối khi list, sẽ dùng danh sách ưu tiên để thử mù
+
+        # 3. Chọn model
+        selected_model = None
+        
+        # Nếu lấy được danh sách thật -> so khớp
+        if available_models:
+            for p_model in priority_models:
+                if p_model in available_models:
+                    selected_model = p_model
+                    break
+        
+        # Nếu chưa chọn được (do không list được hoặc không khớp), chọn cái đầu tiên trong ưu tiên làm mặc định
+        if not selected_model:
+            selected_model = 'gemini-1.5-flash' # Mặc định tốt nhất hiện tại
+
+        print(f"✅ AI Connected to: {selected_model}")
+        return genai.GenerativeModel(selected_model), True
+
+    except Exception as e:
+        print(f"❌ AI Error: {e}")
+        return None, False
+
+# Khởi tạo
+model, AI_READY = init_gemini_smart()
 
 # --- KHO ẢNH DỰ PHÒNG (BACKUP LIBRARY) ---
 BACKUP_IMAGES = {
@@ -59,16 +90,19 @@ BACKUP_IMAGES = {
 }
 
 def get_smart_image(scenario_title, step_text, category_key="GENERAL"):
-    if AI_READY:
+    """Hệ thống tạo ảnh thông minh 2 lớp"""
+    if AI_READY and model:
         try:
             prompt_req = f"Extract 3 visual keywords (english nouns) for stock photo: '{scenario_title} - {step_text}'. Comma separated. No intro."
-            res = model.generate_content(prompt_req, request_options={"timeout": 3})
+            res = model.generate_content(prompt_req, request_options={"timeout": 5})
             keywords = res.text.strip().replace("\n", "")
+            
             seed = hash(step_text) % 10000
             encoded = urllib.parse.quote(f"{keywords}, highly detailed, cinematic lighting")
             return f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=600&seed={seed}&nologo=true&model=flux"
-        except:
+        except Exception as e:
             pass 
+    
     images = BACKUP_IMAGES.get(category_key, BACKUP_IMAGES["GENERAL"])
     idx = len(step_text) % len(images)
     return images[idx]
@@ -138,7 +172,6 @@ st.markdown("""
         -webkit-text-fill-color: transparent;
         font-weight: 900; letter-spacing: 1px;
     }
-    /* FIX LỖI UI EXPANDER */
     .leaderboard-box {
         background: rgba(0,0,0,0.2);
         padding: 15px;
@@ -149,7 +182,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. DỮ LIỆU KỊCH BẢN (GỐC + MỚI)
+# 2. DỮ LIỆU KỊCH BẢN GỐC
 # ==============================================================================
 INITIAL_DATA = {
     "SC_FNB": {
@@ -173,35 +206,27 @@ INITIAL_DATA = {
     "SC_TECH": { "title": "IT: Net Down", "desc": "Meeting interrupted.", "difficulty": "MEDIUM", "category": "OFFICE", "cover": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=800",
         "customer": {"name": "Ken", "traits": ["Urgent"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Ken"}, 
         "steps": { "start": {"text":"Net down!","choices":{"A":"Restart","B":"Check"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FIXED", "text":"Online.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Churn.", "score":0} } },
-    
     "SC_RETAIL": { "title": "Retail: Broken", "desc": "Vase arrived broken.", "difficulty": "HARD", "category": "RETAIL", "cover": "https://images.unsplash.com/photo-1596496050844-461dc5b7263f?q=80&w=800",
         "customer": {"name": "Lan", "traits": ["VIP"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Lan"}, 
         "steps": { "start": {"text":"Broken!","choices":{"A":"Refund","B":"Replace"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FIXED", "text":"Replaced.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Lost.", "score":0} } },
-    
     "SC_ECOMM": { "title": "E-comm: Lost", "desc": "Package missing.", "difficulty": "MEDIUM", "category": "RETAIL", "cover": "https://images.unsplash.com/photo-1566576912321-d58ba2188273?q=80&w=800",
         "customer": {"name": "Tom", "traits": ["Anxious"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Tom"}, 
         "steps": { "start": {"text":"Missing!","choices":{"A":"Wait","B":"Check"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FOUND", "text":"Got it.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Refund.", "score":0} } },
-    
     "SC_BANK": { "title": "Bank: Card Eaten", "desc": "ATM took card.", "difficulty": "HARD", "category": "OFFICE", "cover": "https://images.unsplash.com/photo-1601597111158-2fceff292cdc?q=80&w=800",
         "customer": {"name": "Eve", "traits": ["Old"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Eve"}, 
         "steps": { "start": {"text":"My card!","choices":{"A":"Wait","B":"Help"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"SAFE", "text":"Solved.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Left.", "score":0} } },
-    
     "SC_AIRLINE": { "title": "Airline: Cancel", "desc": "Flight cancelled.", "difficulty": "EXTREME", "category": "HOTEL", "cover": "https://images.unsplash.com/photo-1436491865332-7a61a14527c5?q=80&w=800",
         "customer": {"name": "Dave", "traits": ["Panic"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Dave"}, 
         "steps": { "start": {"text":"Cancelled?!","choices":{"A":"Sorry","B":"Rebook"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FLYING", "text":"Rebooked.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Missed.", "score":0} } },
-    
     "SC_SPA": { "title": "Spa: Allergy", "desc": "Face burning.", "difficulty": "HARD", "category": "HOTEL", "cover": "https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?q=80&w=800",
         "customer": {"name": "Chloe", "traits": ["Pain"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Chloe"}, 
         "steps": { "start": {"text":"Ouch!","choices":{"A":"Ignore","B":"Ice"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Cruel"},"B":{"next":"win","change":20,"analysis":"Care"}}}, "win": {"type":"WIN", "title":"HEALED", "text":"Ok now.", "score":100}, "lose": {"type":"LOSE", "title":"SUED", "text":"Lawsuit.", "score":0} } },
-    
     "SC_SAAS": { "title": "SaaS: Data Loss", "desc": "Deleted data.", "difficulty": "HARD", "category": "OFFICE", "cover": "https://images.unsplash.com/photo-1551434678-e076c223a692?q=80&w=800",
         "customer": {"name": "Sarah", "traits": ["Angry"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah"}, 
         "steps": { "start": {"text":"Gone!","choices":{"A":"Oops","B":"Restore"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"SAVED", "text":"Restored.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Fired.", "score":0} } },
-    
     "SC_REAL": { "title": "Real Est: Mold", "desc": "Moldy apartment.", "difficulty": "VERY HARD", "category": "HOTEL", "cover": "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=800",
         "customer": {"name": "Chen", "traits": ["Rich"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Chen"}, 
         "steps": { "start": {"text":"Mold!","choices":{"A":"Clean","B":"Move"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"HAPPY", "text":"Moved.", "score":100}, "lose": {"type":"LOSE", "title":"SUED", "text":"Health issue.", "score":0} } },
-    
     "SC_LOG": { "title": "Logistics: Broken", "desc": "Gear broken.", "difficulty": "VERY HARD", "category": "RETAIL", "cover": "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=800",
         "customer": {"name": "Rob", "traits": ["Mad"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Rob"}, 
         "steps": { "start": {"text":"Broken!","choices":{"A":"Claim","B":"Truck"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"SAVED", "text":"Saved.", "score":100}, "lose": {"type":"LOSE", "title":"FIRED", "text":"Lost.", "score":0} } }
@@ -217,7 +242,6 @@ if 'generated_scenarios' not in st.session_state:
     st.session_state.generated_scenarios = {}
 
 def load_data(): 
-    # Kết hợp dữ liệu gốc và dữ liệu do người dùng tạo
     data = INITIAL_DATA.copy()
     data.update(st.session_state.generated_scenarios)
     return data
@@ -235,7 +259,6 @@ def show_leaderboard():
     if os.path.exists(HISTORY_FILE):
         df = pd.read_csv(HISTORY_FILE)
         if not df.empty:
-            # Fix lỗi hiển thị: Không dùng expander nữa mà hiển thị trực tiếp
             st.markdown("### 🏆 ELITE AGENTS (TOP 10)")
             st.markdown('<div class="leaderboard-box">', unsafe_allow_html=True)
             st.dataframe(df.sort_values(by="Score", ascending=False).head(10), use_container_width=True, hide_index=True)
@@ -253,8 +276,12 @@ ALL_SCENARIOS = load_data()
 # --- SIDEBAR ---
 with st.sidebar:
     st.title("⚡ SERVICE HERO")
-    st.caption("AI Core: Online")
-    # THÊM MỤC PHÒNG TẬP (ROLEPLAY)
+    
+    if AI_READY:
+        st.caption("✅ AI Core: Online")
+    else:
+        st.caption("⚠️ AI Core: Offline")
+        
     menu = st.radio("NAVIGATION", ["DASHBOARD", "CREATE (AI)", "PHÒNG TẬP (AI CHAT)"])
     st.divider()
     if st.button("🔄 REFRESH SYSTEM"):
@@ -278,7 +305,6 @@ if menu == "DASHBOARD":
                 st.session_state.player_name = ""
                 st.rerun()
 
-        # HIỂN THỊ LEADERBOARD (Đã sửa lỗi giao diện)
         show_leaderboard()
             
         st.divider()
@@ -320,14 +346,12 @@ if menu == "DASHBOARD":
         step_id = st.session_state.current_step
         step_data = scenario['steps'].get(step_id, scenario.get(step_id))
         
-        # Cache ảnh
         cache_key = f"{s_key}_{step_id}"
         if cache_key not in st.session_state.step_img_cache:
             st.session_state.step_img_cache[cache_key] = get_smart_image(scenario['title'], step_data.get('text', ''), scenario.get('category', 'GENERAL'))
         
         current_img = st.session_state.step_img_cache[cache_key]
         
-        # Sidebar Game
         with st.sidebar:
             st.divider()
             if st.button("❌ ABORT", use_container_width=True):
@@ -341,8 +365,7 @@ if menu == "DASHBOARD":
             st.markdown(f"**PATIENCE:** {p}%")
             st.progress(p/100)
 
-        # UI Chơi
-        if "type" in step_data: # End Game
+        if "type" in step_data:
             st.title(step_data['title'])
             st.image(current_img, use_container_width=True)
             
@@ -365,7 +388,7 @@ if menu == "DASHBOARD":
                 if 'saved' in st.session_state: del st.session_state.saved
                 st.rerun()
 
-        else: # Playing
+        else:
             st.subheader(scenario['title'])
             st.image(current_img, use_container_width=True)
             
@@ -399,84 +422,81 @@ elif menu == "CREATE (AI)":
         submitted = st.form_submit_button("🚀 TẠO NGAY")
         
         if submitted and topic:
-            with st.spinner("AI đang viết kịch bản..."):
-                try:
-                    # Prompt cho Gemini tạo JSON đúng format
-                    prompt = f"""
-                    Create a JSON scenario for customer service training. 
-                    Topic: {topic}. 
-                    Category: {category}.
-                    Language: Vietnamese (Content must be Vietnamese).
-                    Format strict JSON like this example:
-                    {{
-                        "title": "Short Title", "desc": "Short description", "difficulty": "HARD", "category": "{category}",
-                        "cover": "https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?q=80&w=800",
-                        "customer": {{"name": "Name", "traits": ["Angry"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=123"}},
-                        "steps": {{
-                            "start": {{"text": "Customer complaint", "choices": {{"A":"Option 1", "B":"Option 2"}}, "consequences": {{"A":{{"next":"lose","change":-20,"analysis":"Bad"}}, "B":{{"next":"win","change":20,"analysis":"Good"}}}}}},
-                            "win": {{"type":"WIN", "title":"GOOD JOB", "text":"Result text", "score":100}},
-                            "lose": {{"type":"LOSE", "title":"FAILED", "text":"Result text", "score":0}}
+            if not AI_READY:
+                st.error("AI chưa sẵn sàng. Vui lòng kiểm tra API Key.")
+            else:
+                with st.spinner("AI đang viết kịch bản..."):
+                    try:
+                        prompt = f"""
+                        Create a JSON scenario for customer service training. 
+                        Topic: {topic}. 
+                        Category: {category}.
+                        Language: Vietnamese (Content must be Vietnamese).
+                        Format strict JSON like this example:
+                        {{
+                            "title": "Short Title", "desc": "Short description", "difficulty": "HARD", "category": "{category}",
+                            "cover": "https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?q=80&w=800",
+                            "customer": {{"name": "Name", "traits": ["Angry"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=123"}},
+                            "steps": {{
+                                "start": {{"text": "Customer complaint", "choices": {{"A":"Option 1", "B":"Option 2"}}, "consequences": {{"A":{{"next":"lose","change":-20,"analysis":"Bad"}}, "B":{{"next":"win","change":20,"analysis":"Good"}}}}}},
+                                "win": {{"type":"WIN", "title":"GOOD JOB", "text":"Result text", "score":100}},
+                                "lose": {{"type":"LOSE", "title":"FAILED", "text":"Result text", "score":0}}
+                            }}
                         }}
-                    }}
-                    Return ONLY raw JSON, no markdown.
-                    """
-                    resp = model.generate_content(prompt)
-                    clean_json = resp.text.replace("```json", "").replace("```", "").strip()
-                    new_scenario = json.loads(clean_json)
-                    
-                    # Lưu vào Session State
-                    sc_id = f"SC_GEN_{int(time.time())}"
-                    st.session_state.generated_scenarios[sc_id] = new_scenario
-                    st.success("Đã tạo xong! Vào Dashboard để chơi ngay.")
-                    time.sleep(1)
-                    st.rerun()
-                    
-                except Exception as e:
-                    st.error(f"Lỗi AI: {str(e)}")
+                        Return ONLY raw JSON, no markdown.
+                        """
+                        resp = model.generate_content(prompt)
+                        clean_json = resp.text.replace("```json", "").replace("```", "").strip()
+                        new_scenario = json.loads(clean_json)
+                        
+                        sc_id = f"SC_GEN_{int(time.time())}"
+                        st.session_state.generated_scenarios[sc_id] = new_scenario
+                        st.success("Đã tạo xong! Vào Dashboard để chơi ngay.")
+                        time.sleep(1)
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"Lỗi AI: {str(e)}")
 
 # --- CHẾ ĐỘ PHÒNG TẬP (AI CHAT) ---
 elif menu == "PHÒNG TẬP (AI CHAT)":
     st.header("🥋 PHÒNG TẬP DOJO")
     st.caption("Chat tự do với khách hàng ảo để rèn luyện kỹ năng.")
     
-    # Cấu hình Chat
     with st.expander("Cấu hình tình huống", expanded=False):
         role_topic = st.text_input("Tình huống luyện tập:", value="Khách hàng đòi trả hàng vì không thích màu")
         if st.button("Bắt đầu lại"):
             st.session_state.roleplay_messages = []
             st.rerun()
 
-    # Hiển thị lịch sử chat
     for message in st.session_state.roleplay_messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Xử lý input
     if prompt := st.chat_input("Bạn sẽ trả lời sao?"):
-        # 1. Hiện câu user
         st.session_state.roleplay_messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # 2. AI trả lời
         with st.chat_message("assistant"):
             with st.spinner("Khách đang gõ..."):
-                try:
-                    # Xây dựng ngữ cảnh
-                    history_text = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.roleplay_messages])
-                    ai_prompt = f"""
-                    Act as an angry/difficult customer in this situation: "{role_topic}".
-                    The user is the customer support agent.
-                    Reply in Vietnamese. Be natural, emotional, slightly unreasonable.
-                    Conversation history:
-                    {history_text}
-                    Customer:
-                    """
-                    response = model.generate_content(ai_prompt)
-                    ai_reply = response.text
-                    
-                    st.markdown(ai_reply)
-                    st.session_state.roleplay_messages.append({"role": "assistant", "content": ai_reply})
-                except:
-                    st.error("Lỗi kết nối AI.")
-
+                if not AI_READY:
+                    st.error("AI chưa sẵn sàng.")
+                else:
+                    try:
+                        history_text = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.roleplay_messages])
+                        ai_prompt = f"""
+                        Act as an angry/difficult customer in this situation: "{role_topic}".
+                        The user is the customer support agent.
+                        Reply in Vietnamese. Be natural, emotional, slightly unreasonable.
+                        Conversation history:
+                        {history_text}
+                        Customer:
+                        """
+                        response = model.generate_content(ai_prompt)
+                        ai_reply = response.text
+                        
+                        st.markdown(ai_reply)
+                        st.session_state.roleplay_messages.append({"role": "assistant", "content": ai_reply})
+                    except:
+                        st.error("Lỗi kết nối AI.")
