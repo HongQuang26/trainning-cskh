@@ -9,7 +9,7 @@ import google.generativeai as genai
 import random
 
 # ==============================================================================
-# 0. CẤU HÌNH & KHỞI TẠO (CƠ CHẾ THỬ SAI - FAILSAFE)
+# 0. CẤU HÌNH & KHỞI TẠO (DIAGNOSTIC MODE)
 # ==============================================================================
 GEMINI_API_KEY = "AIzaSyBCPg9W5dvvNygm4KEM-gbn9_wPnvfUsrI"
 
@@ -20,51 +20,60 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- HÀM TỰ ĐỘNG KẾT NỐI AI SIÊU BỀN ---
-def init_gemini_failsafe():
+# --- HÀM KẾT NỐI AI & BẮT LỖI CHI TIẾT ---
+def init_gemini_diagnostic():
     """
-    Thử lần lượt từng model. Cái nào chạy được thì chốt luôn.
-    Không phụ thuộc vào list_models (vì list_models có thể bị lỗi quyền).
+    Thử kết nối và trả về lỗi chi tiết nếu thất bại để hiển thị lên màn hình.
     """
-    genai.configure(api_key=GEMINI_API_KEY)
-    
-    # Danh sách các tên model có thể dùng (Ưu tiên cái ổn định trước)
-    # gemini-1.5-flash: Mới, nhanh nhưng hay lỗi 404 nếu chưa cấp quyền
-    # gemini-pro: Cũ nhưng cực kỳ ổn định, ai cũng dùng được
-    # gemini-1.0-pro: Tên gọi khác của pro
-    candidate_models = ['gemini-1.5-flash', 'gemini-pro', 'gemini-1.0-pro']
-    
-    active_model = None
-    model_name_used = ""
+    if not GEMINI_API_KEY:
+        return None, False, "Chưa nhập API Key"
 
-    print("🔄 Đang dò tìm Model AI phù hợp...")
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+    except Exception as e:
+        return None, False, f"Lỗi cấu hình Key: {str(e)}"
+    
+    # Danh sách model thử nghiệm (Từ mới đến cũ)
+    candidate_models = [
+        'gemini-1.5-flash',       # Ưu tiên 1
+        'gemini-1.5-flash-latest',# Biến thể
+        'gemini-pro',             # Ổn định nhất
+        'gemini-1.0-pro',         # Tên gọi cũ
+        'gemini-1.0-pro-latest'   # Biến thể cũ
+    ]
+    
+    error_logs = []
 
     for m_name in candidate_models:
         try:
-            # 1. Khởi tạo
+            # 1. Tạo model
             temp_model = genai.GenerativeModel(m_name)
             
-            # 2. TEST THỬ NGAY (Gửi 1 tin nhắn test nhẹ)
-            # Nếu bước này không lỗi 404 thì mới tính là thành công
-            temp_model.generate_content("Hello", request_options={"timeout": 5})
+            # 2. TEST GỌI THỰC TẾ (Quan trọng)
+            # Gửi request siêu nhỏ để xem Google có trả lời không
+            response = temp_model.generate_content("Hi", request_options={"timeout": 5})
             
-            # Nếu code chạy đến đây nghĩa là model này NGON
-            active_model = temp_model
-            model_name_used = m_name
-            print(f"✅ Đã kết nối thành công với: {m_name}")
-            break # Thoát vòng lặp
+            if response:
+                print(f"✅ KẾT NỐI THÀNH CÔNG: {m_name}")
+                return temp_model, True, None # Thành công
+                
         except Exception as e:
-            print(f"❌ {m_name} bị lỗi (Bỏ qua): {e}")
-            continue # Thử cái tiếp theo
+            # Ghi lại lỗi của từng model để báo cáo
+            err_msg = str(e)
+            print(f"❌ {m_name} thất bại: {err_msg}")
+            if "404" in err_msg:
+                error_logs.append(f"Model {m_name} không tìm thấy (404).")
+            elif "400" in err_msg or "API key" in err_msg:
+                # Nếu lỗi Key, không cần thử các model khác nữa, dừng luôn
+                return None, False, f"Lỗi API KEY: Key không hợp lệ hoặc chưa bật quyền Generative Language API.\nChi tiết: {err_msg}"
+            else:
+                error_logs.append(f"{m_name}: {err_msg}")
 
-    if active_model:
-        return active_model, True
-    else:
-        print("❌ TẤT CẢ MODEL ĐỀU THẤT BẠI. KIỂM TRA LẠI API KEY.")
-        return None, False
+    # Nếu chạy hết vòng lặp mà không return -> Thất bại toàn tập
+    return None, False, "\n".join(error_logs)
 
 # Khởi tạo
-model, AI_READY = init_gemini_failsafe()
+model, AI_READY, AI_ERROR_LOG = init_gemini_diagnostic()
 
 # --- KHO ẢNH DỰ PHÒNG (BACKUP LIBRARY) ---
 BACKUP_IMAGES = {
@@ -281,10 +290,13 @@ with st.sidebar:
     st.title("⚡ SERVICE HERO")
     
     if AI_READY:
-        st.caption("✅ AI Core: Online")
+        st.success("✅ AI Core: Online")
     else:
-        st.caption("⚠️ AI Core: Offline")
-        st.error("Lỗi AI: Vui lòng xem Terminal để biết chi tiết.")
+        st.error("⚠️ AI Core: Offline")
+        # HIỆN LỖI CHI TIẾT TRONG SIDEBAR
+        with st.expander("🔍 XEM CHI TIẾT LỖI", expanded=True):
+            st.code(AI_ERROR_LOG, language="text")
+            st.info("Cách khắc phục: Nếu lỗi API Key, hãy kiểm tra lại trên Google AI Studio xem đã bật quyền chưa.")
         
     menu = st.radio("NAVIGATION", ["DASHBOARD", "CREATE (AI)", "PHÒNG TẬP (AI CHAT)"])
     st.divider()
@@ -427,7 +439,7 @@ elif menu == "CREATE (AI)":
         
         if submitted and topic:
             if not AI_READY:
-                st.error("AI chưa sẵn sàng. Vui lòng kiểm tra API Key hoặc kết nối mạng.")
+                st.error("AI chưa sẵn sàng. Vui lòng kiểm tra lỗi ở Sidebar bên trái.")
             else:
                 with st.spinner("AI đang viết kịch bản..."):
                     try:
@@ -485,7 +497,7 @@ elif menu == "PHÒNG TẬP (AI CHAT)":
         with st.chat_message("assistant"):
             with st.spinner("Khách đang gõ..."):
                 if not AI_READY:
-                    st.error("AI chưa sẵn sàng. (Kiểm tra Terminal để xem lỗi 404)")
+                    st.error("AI chưa sẵn sàng. Vui lòng xem lỗi ở Sidebar.")
                 else:
                     try:
                         history_text = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.roleplay_messages])
