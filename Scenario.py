@@ -11,7 +11,7 @@ import google.generativeai as genai
 import random
 
 # ==============================================================================
-# 0. CẤU HÌNH & KHỞI TẠO
+# 0. CONFIGURATION & SETUP
 # ==============================================================================
 GEMINI_API_KEY = "AIzaSyBCPg9W5dvvNygm4KEM-gbn9_wPnvfUsrI"
 
@@ -22,7 +22,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Khởi tạo Gemini
+# Initialize Gemini
 AI_READY = False
 try:
     genai.configure(api_key=GEMINI_API_KEY)
@@ -31,7 +31,7 @@ try:
 except:
     pass
 
-# --- KHO ẢNH DỰ PHÒNG ---
+# --- BACKUP IMAGE LIBRARY ---
 BACKUP_IMAGES = {
     "F&B": ["https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?q=80&w=1000", "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1000", "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=1000"],
     "HOTEL": ["https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1000", "https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=1000", "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=1000"],
@@ -81,16 +81,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. DATA
+# 2. DATA (ENGLISH)
 # ==============================================================================
 INITIAL_DATA = {
-    "SC_FNB": { "title": "F&B: Hair in Soup", "desc": "Customer found hair in food.", "difficulty": "HARD", "category": "F&B", "skill": "Đồng Cảm", "cover": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800", "customer": {"name": "Jade", "traits": ["Picky"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Jade"}, "steps": { "start": {"text": "There's hair in my soup!", "choices": {"A":"Deny", "B":"Apologize"}, "consequences": {"A":{"next":"lose","change":-40,"analysis":"Bad"}, "B":{"next":"step2","change":10,"analysis":"Good"}}}, "step2": {"text": "I'm leaving!", "choices": {"A":"Let go", "B":"Dessert"}, "consequences": {"A":{"next":"lose","change":-10,"analysis":"Lost"}, "B":{"next":"win","change":40,"analysis":"Saved"}}}, "win": {"type":"WIN", "title":"SAVED", "text":"Happy.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Bad.", "score":40}} },
-    "SC_HOTEL": { "title": "Hotel: Overbooked", "desc": "No room for honeymoon.", "difficulty": "EXTREME", "category": "HOTEL", "skill": "Thương Lượng", "cover": "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=800", "customer": {"name": "Mike", "traits": ["Tired"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike"}, "steps": { "start": {"text": "No room?", "choices": {"A":"Error", "B":"My Fault"}, "consequences": {"A":{"next":"lose","change":-30,"analysis":"Excuses"}, "B":{"next":"step2","change":20,"analysis":"Ownership"}}}, "step2": {"text": "Fix it!", "choices": {"A":"Breakfast", "B":"Upgrade"}, "consequences": {"A":{"next":"lose","change":-10,"analysis":"Cheap"}, "B":{"next":"win","change":50,"analysis":"Hero"}}}, "win": {"type":"WIN", "title":"DREAM", "text":"Loved it.", "score":100}, "lose": {"type":"LOSE", "title":"LEFT", "text":"Walked out.", "score":0}} },
-    "SC_TECH": { "title": "IT: Net Down", "desc": "Meeting interrupted.", "difficulty": "MEDIUM", "category": "OFFICE", "skill": "Giải Quyết VĐ", "cover": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=800", "customer": {"name": "Ken", "traits": ["Urgent"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Ken"}, "steps": { "start": {"text":"Net down!","choices":{"A":"Restart","B":"Check"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FIXED", "text":"Online.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Churn.", "score":0} } },
-    "SC_RETAIL": { "title": "Retail: Broken", "desc": "Vase arrived broken.", "difficulty": "HARD", "category": "RETAIL", "skill": "Kiên Nhẫn", "cover": "https://images.unsplash.com/photo-1596496050844-461dc5b7263f?q=80&w=800", "customer": {"name": "Lan", "traits": ["VIP"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Lan"}, "steps": { "start": {"text":"Broken!","choices":{"A":"Refund","B":"Replace"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FIXED", "text":"Replaced.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Lost.", "score":0} } },
-    "SC_ECOMM": { "title": "E-comm: Lost", "desc": "Package missing.", "difficulty": "MEDIUM", "category": "RETAIL", "skill": "Trách Nhiệm", "cover": "https://images.unsplash.com/photo-1566576912321-d58ba2188273?q=80&w=800", "customer": {"name": "Tom", "traits": ["Anxious"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Tom"}, "steps": { "start": {"text":"Missing!","choices":{"A":"Wait","B":"Check"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FOUND", "text":"Got it.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Refund.", "score":0} } },
-    "SC_BANK": { "title": "Bank: Card Eaten", "desc": "ATM took card.", "difficulty": "HARD", "category": "OFFICE", "skill": "Tuân Thủ", "cover": "https://images.unsplash.com/photo-1601597111158-2fceff292cdc?q=80&w=800", "customer": {"name": "Eve", "traits": ["Old"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Eve"}, "steps": { "start": {"text":"My card!","choices":{"A":"Wait","B":"Help"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"SAFE", "text":"Solved.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Left.", "score":0} } },
-    "SC_AIRLINE": { "title": "Airline: Cancel", "desc": "Flight cancelled.", "difficulty": "EXTREME", "category": "HOTEL", "skill": "Chịu Áp Lực", "cover": "https://images.unsplash.com/photo-1436491865332-7a61a14527c5?q=80&w=800", "customer": {"name": "Dave", "traits": ["Panic"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Dave"}, "steps": { "start": {"text":"Cancelled?!","choices":{"A":"Sorry","B":"Rebook"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FLYING", "text":"Rebooked.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Missed.", "score":0} } }
+    "SC_FNB": { "title": "F&B: Hair in Soup", "desc": "Customer found hair in food.", "difficulty": "HARD", "category": "F&B", "skill": "Empathy", "cover": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800", "customer": {"name": "Jade", "traits": ["Picky"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Jade"}, "steps": { "start": {"text": "There's hair in my soup!", "choices": {"A":"Deny", "B":"Apologize"}, "consequences": {"A":{"next":"lose","change":-40,"analysis":"Bad"}, "B":{"next":"step2","change":10,"analysis":"Good"}}}, "step2": {"text": "I'm leaving!", "choices": {"A":"Let go", "B":"Dessert"}, "consequences": {"A":{"next":"lose","change":-10,"analysis":"Lost"}, "B":{"next":"win","change":40,"analysis":"Saved"}}}, "win": {"type":"WIN", "title":"SAVED", "text":"Happy.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Bad.", "score":40}} },
+    "SC_HOTEL": { "title": "Hotel: Overbooked", "desc": "No room for honeymoon.", "difficulty": "EXTREME", "category": "HOTEL", "skill": "Negotiation", "cover": "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=800", "customer": {"name": "Mike", "traits": ["Tired"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike"}, "steps": { "start": {"text": "No room?", "choices": {"A":"Error", "B":"My Fault"}, "consequences": {"A":{"next":"lose","change":-30,"analysis":"Excuses"}, "B":{"next":"step2","change":20,"analysis":"Ownership"}}}, "step2": {"text": "Fix it!", "choices": {"A":"Breakfast", "B":"Upgrade"}, "consequences": {"A":{"next":"lose","change":-10,"analysis":"Cheap"}, "B":{"next":"win","change":50,"analysis":"Hero"}}}, "win": {"type":"WIN", "title":"DREAM", "text":"Loved it.", "score":100}, "lose": {"type":"LOSE", "title":"LEFT", "text":"Walked out.", "score":0}} },
+    "SC_TECH": { "title": "IT: Net Down", "desc": "Meeting interrupted.", "difficulty": "MEDIUM", "category": "OFFICE", "skill": "Problem Solving", "cover": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=800", "customer": {"name": "Ken", "traits": ["Urgent"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Ken"}, "steps": { "start": {"text":"Net down!","choices":{"A":"Restart","B":"Check"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FIXED", "text":"Online.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Churn.", "score":0} } },
+    "SC_RETAIL": { "title": "Retail: Broken", "desc": "Vase arrived broken.", "difficulty": "HARD", "category": "RETAIL", "skill": "Patience", "cover": "https://images.unsplash.com/photo-1596496050844-461dc5b7263f?q=80&w=800", "customer": {"name": "Lan", "traits": ["VIP"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Lan"}, "steps": { "start": {"text":"Broken!","choices":{"A":"Refund","B":"Replace"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FIXED", "text":"Replaced.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Lost.", "score":0} } },
+    "SC_ECOMM": { "title": "E-comm: Lost", "desc": "Package missing.", "difficulty": "MEDIUM", "category": "RETAIL", "skill": "Responsibility", "cover": "https://images.unsplash.com/photo-1566576912321-d58ba2188273?q=80&w=800", "customer": {"name": "Tom", "traits": ["Anxious"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Tom"}, "steps": { "start": {"text":"Missing!","choices":{"A":"Wait","B":"Check"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FOUND", "text":"Got it.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Refund.", "score":0} } },
+    "SC_BANK": { "title": "Bank: Card Eaten", "desc": "ATM took card.", "difficulty": "HARD", "category": "OFFICE", "skill": "Compliance", "cover": "https://images.unsplash.com/photo-1601597111158-2fceff292cdc?q=80&w=800", "customer": {"name": "Eve", "traits": ["Old"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Eve"}, "steps": { "start": {"text":"My card!","choices":{"A":"Wait","B":"Help"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"SAFE", "text":"Solved.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Left.", "score":0} } },
+    "SC_AIRLINE": { "title": "Airline: Cancel", "desc": "Flight cancelled.", "difficulty": "EXTREME", "category": "HOTEL", "skill": "Resilience", "cover": "https://images.unsplash.com/photo-1436491865332-7a61a14527c5?q=80&w=800", "customer": {"name": "Dave", "traits": ["Panic"], "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Dave"}, "steps": { "start": {"text":"Cancelled?!","choices":{"A":"Sorry","B":"Rebook"},"consequences":{"A":{"next":"lose","change":-20,"analysis":"Bad"},"B":{"next":"win","change":20,"analysis":"Good"}}}, "win": {"type":"WIN", "title":"FLYING", "text":"Rebooked.", "score":100}, "lose": {"type":"LOSE", "title":"FAIL", "text":"Missed.", "score":0} } }
 }
 
 DB_FILE = "scenarios.json"
@@ -135,9 +135,8 @@ def draw_radar_chart(player_name):
     fig.patch.set_facecolor('none')
     ax.set_facecolor('none')
     
-    # SỬA LỖI VALUE ERROR TẠI ĐÂY
-    # Thay 'rgba(...)' thành tuple (1, 1, 1, 0.2)
-    ax.spines['polar'].set_color((1, 1, 1, 0.2)) 
+    # FIXED: Use tuple for RGBA to avoid ValueError
+    ax.spines['polar'].set_color((1, 1, 1, 0.2))
     
     ax.tick_params(axis='x', colors='white')
     return fig
@@ -154,15 +153,15 @@ with st.sidebar:
     menu = st.radio("NAVIGATION", ["DASHBOARD", "CREATE"])
     st.divider()
     
-    # --- TÍNH NĂNG RESET LEADERBOARD ---
+    # --- RESET LEADERBOARD FEATURE ---
     if st.button("🗑️ RESET LEADERBOARD"):
         if os.path.exists(HISTORY_FILE):
             os.remove(HISTORY_FILE)
-            st.success("Đã xóa dữ liệu bảng xếp hạng!")
+            st.success("Leaderboard has been reset!")
             time.sleep(1)
             st.rerun()
         else:
-            st.warning("Chưa có dữ liệu để xóa.")
+            st.warning("No data to reset.")
             
     if st.button("🔄 REFRESH SYSTEM"):
         st.session_state.step_img_cache = {}
@@ -185,11 +184,11 @@ if menu == "DASHBOARD":
                 st.session_state.player_name = ""
                 st.rerun()
 
-            # BIỂU ĐỒ NĂNG LỰC
-            st.markdown("### 📊 HỒ SƠ NĂNG LỰC")
+            # SKILL RADAR CHART
+            st.markdown("### 📊 SKILL PROFILE")
             chart = draw_radar_chart(st.session_state.player_name)
             if chart: st.pyplot(chart, use_container_width=False)
-            else: st.caption("Chưa có dữ liệu. Hãy chơi để hệ thống phân tích.")
+            else: st.caption("No data yet. Play missions to analyze skills.")
 
         # Leaderboard
         st.divider()
@@ -273,7 +272,7 @@ if menu == "DASHBOARD":
             if step_data['type'] == 'WIN': 
                 st.balloons()
                 if 'show_cert' not in st.session_state: st.session_state.show_cert = False
-                if st.button("🏅 NHẬN CHỨNG CHỈ", use_container_width=True):
+                if st.button("🏅 GET CERTIFICATE", use_container_width=True):
                     st.session_state.show_cert = True
                 
                 if st.session_state.show_cert:
